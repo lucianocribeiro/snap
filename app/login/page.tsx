@@ -102,7 +102,14 @@ export default function LoginPage() {
       ) : null}
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
-          <Image src="/logo.png" alt="Snap logo" width={200} height={56} className="h-12 w-auto" priority />
+          <Image
+            src="/logo.png"
+            alt="Snap logo"
+            width={280}
+            height={78}
+            className="h-[4.2rem] w-auto"
+            priority
+          />
         </div>
         <AuthCard
           title="Sign In"

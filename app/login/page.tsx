@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { createClient } from "@/lib/supabase/client";
 
 type LoginErrors = {
   email?: string;
@@ -24,11 +26,15 @@ function validatePassword(value: string) {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [language, setLanguage] = useState<"EN" | "ES">("EN");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState<{ email: boolean; password: boolean }>({
     email: false,
     password: false,
@@ -42,17 +48,57 @@ export default function LoginPage() {
     [email, password],
   );
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reset") === "success") {
+      setToastMessage("Password updated successfully. Please sign in.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timeout = window.setTimeout(() => setToastMessage(null), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTouched({ email: true, password: true });
+    setToastMessage(null);
 
     if (errors.email || errors.password) return;
 
-    console.log("login_submit", { email, password, rememberMe, language });
+    setIsSubmitting(true);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error || !data.user) {
+      setToastMessage("Invalid email or password.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    const role = profile?.role;
+    if (role === "super_admin") {
+      router.replace("/super-admin/dashboard");
+    } else {
+      router.replace("/dashboard");
+    }
   };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">
+      {toastMessage ? (
+        <div className="fixed right-4 top-4 z-50 rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain">
+          {toastMessage}
+        </div>
+      ) : null}
       <AuthCard
         title="Snap"
         description="Sign in to continue to your organization dashboard."
@@ -140,9 +186,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
           >
-            Sign In
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
       </AuthCard>

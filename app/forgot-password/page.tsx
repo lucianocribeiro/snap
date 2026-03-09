@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { createClient } from "@/lib/supabase/client";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,19 +14,25 @@ function validateEmail(value: string) {
 }
 
 export default function ForgotPasswordPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailError = useMemo(() => validateEmail(email), [email]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTouched(true);
     if (emailError) return;
 
-    console.log("forgot_password_submit", { email });
+    setIsSubmitting(true);
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+    });
     setSubmitted(true);
+    setIsSubmitting(false);
   };
 
   return (
@@ -65,9 +72,10 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
             >
-              Send reset link
+              {isSubmitting ? "Sending..." : "Send reset link"}
             </button>
 
             <Link href="/login" className="block text-sm text-snap-textMain underline">

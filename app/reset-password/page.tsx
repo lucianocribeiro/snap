@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { createClient } from "@/lib/supabase/client";
 
 type ResetErrors = {
   password?: string;
@@ -30,10 +32,13 @@ function getStrengthLabel(score: number) {
 }
 
 export default function ResetPasswordPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState<{ password: boolean; confirmPassword: boolean }>({
     password: false,
     confirmPassword: false,
@@ -50,13 +55,19 @@ export default function ResetPasswordPage() {
     return { password: passwordError, confirmPassword: confirmPasswordError };
   }, [password, confirmPassword]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTouched({ password: true, confirmPassword: true });
 
     if (errors.password || errors.confirmPassword) return;
 
-    console.log("reset_password_submit", { password, confirmPassword });
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setIsSubmitting(false);
+
+    if (error) return;
+
+    router.replace("/login?reset=success");
   };
 
   return (
@@ -138,9 +149,10 @@ export default function ResetPasswordPage() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
           >
-            Reset password
+            {isSubmitting ? "Resetting..." : "Reset password"}
           </button>
 
           <Link href="/login" className="block text-sm text-snap-textMain underline">

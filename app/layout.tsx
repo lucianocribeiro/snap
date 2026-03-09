@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Snap",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-snap-bg text-snap-textMain">{children}</body>
+      <body className="bg-snap-bg text-snap-textMain">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

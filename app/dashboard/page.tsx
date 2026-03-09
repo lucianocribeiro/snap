@@ -1,4 +1,5 @@
 import { ChartsSection } from "@/components/dashboard/ChartsSection";
+import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
 import { RecentInvoicesTable } from "@/components/dashboard/RecentInvoicesTable";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { Invoice, SummaryMetric } from "@/components/dashboard/types";
@@ -117,6 +118,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-snap-bg px-4 py-8 md:px-8 lg:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <DashboardChrome />
         <header className="space-y-3">
           <h1 className="text-2xl font-semibold text-snap-textMain">Organization Dashboard</h1>
           <p className="text-sm text-snap-textDim">

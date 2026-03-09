@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -98,7 +99,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-snap-bgDeep text-snap-textMain md:flex">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-snap-border bg-snap-bgSecondary md:flex">
         <div className="flex h-16 items-center border-b border-snap-border px-5">
-          <span className="text-lg font-semibold tracking-tight text-snap-textMain">Snap</span>
+          <Image src="/logo.png" alt="Snap logo" width={120} height={32} className="h-8 w-auto" priority />
         </div>
         <div className="px-3 py-4">
           <SidebarNav items={visibleItems} pathname={pathname} />

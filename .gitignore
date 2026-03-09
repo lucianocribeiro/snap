@@ -27,3 +27,6 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# supabase local temp files
+supabase/.temp/

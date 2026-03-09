@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -99,33 +100,37 @@ export default function LoginPage() {
           {toastMessage}
         </div>
       ) : null}
-      <AuthCard
-        title="Snap"
-        description="Sign in to continue to your organization dashboard."
-        footer={
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-sm text-snap-textDim">Language</span>
-            <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
-              {(["EN", "ES"] as const).map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setLanguage(lang)}
-                  className={[
-                    "rounded px-3 py-1 text-sm",
-                    language === lang
-                      ? "bg-snap-card text-snap-textMain"
-                      : "text-snap-textDim hover:text-snap-textMain",
-                  ].join(" ")}
-                >
-                  {lang}
-                </button>
-              ))}
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex justify-center">
+          <Image src="/logo.png" alt="Snap logo" width={200} height={56} className="h-12 w-auto" priority />
+        </div>
+        <AuthCard
+          title="Sign In"
+          description="Sign in to continue to your organization dashboard."
+          footer={
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-sm text-snap-textDim">Language</span>
+              <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
+                {(["EN", "ES"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLanguage(lang)}
+                    className={[
+                      "rounded px-3 py-1 text-sm",
+                      language === lang
+                        ? "bg-snap-card text-snap-textMain"
+                        : "text-snap-textDim hover:text-snap-textMain",
+                    ].join(" ")}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        }
-      >
-        <form className="space-y-6" onSubmit={handleSubmit} noValidate>
+          }
+        >
+          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm text-snap-textDim">
               Email
@@ -191,8 +196,9 @@ export default function LoginPage() {
           >
             {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
-        </form>
-      </AuthCard>
+          </form>
+        </AuthCard>
+      </div>
     </main>
   );
 }

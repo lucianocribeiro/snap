@@ -8,6 +8,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        "snap-bgDeep": "#0B111A",
+        "snap-bgSecondary": "#121A26",
+        "snap-accent": "#6BA7FF",
         "snap-bg": "#0B111A",
         "snap-surface": "#121A26",
         "snap-card": "#1A2433",

@@ -8,27 +8,34 @@ type NavItem = {
   label: string;
 };
 
-const baseItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/projects", label: "Projects" },
-  { href: "/invoices", label: "Invoices" },
-];
-
-const orgAdminItems: NavItem[] = [
-  { href: "/users", label: "Users" },
-  { href: "/categories", label: "Categories" },
-];
-
-const superAdminItems: NavItem[] = [{ href: "/super-admin/dashboard", label: "Super Admin" }];
+const roleItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
+  org_admin: [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/projects", label: "Projects" },
+    { href: "/invoices", label: "Invoices" },
+    { href: "/users", label: "Users" },
+    { href: "/categories", label: "Categories" },
+    { href: "/settings", label: "Settings" },
+  ],
+  user: [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/projects", label: "Projects" },
+    { href: "/invoices", label: "Invoices" },
+    { href: "/reports", label: "Reports" },
+    { href: "/settings", label: "Settings" },
+  ],
+  super_admin: [
+    { href: "/super-admin/dashboard", label: "Dashboard" },
+    { href: "/super-admin/organizations", label: "Organizations" },
+    { href: "/super-admin/users", label: "Users" },
+    { href: "/super-admin/settings", label: "Settings" },
+  ],
+};
 
 export function DashboardChrome() {
   const { user, userRole, signOut } = useAuth();
 
-  const items = [
-    ...baseItems,
-    ...(userRole === "org_admin" || userRole === "super_admin" ? orgAdminItems : []),
-    ...(userRole === "super_admin" ? superAdminItems : []),
-  ];
+  const items = userRole ? roleItems[userRole] : [];
 
   return (
     <div className="mb-8 grid gap-4 lg:grid-cols-[220px_1fr]">

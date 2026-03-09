@@ -14,15 +14,31 @@ type DashboardLayoutProps = {
 type NavItem = {
   href: string;
   label: string;
-  roles?: Array<"super_admin" | "org_admin" | "user">;
 };
 
-const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/super-admin/dashboard", label: "Organizations", roles: ["super_admin"] },
-  { href: "/users", label: "Users", roles: ["super_admin", "org_admin"] },
-  { href: "/settings", label: "Settings" },
-];
+const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
+  org_admin: [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/projects", label: "Projects" },
+    { href: "/invoices", label: "Invoices" },
+    { href: "/users", label: "Users" },
+    { href: "/categories", label: "Categories" },
+    { href: "/settings", label: "Settings" },
+  ],
+  user: [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/projects", label: "Projects" },
+    { href: "/invoices", label: "Invoices" },
+    { href: "/reports", label: "Reports" },
+    { href: "/settings", label: "Settings" },
+  ],
+  super_admin: [
+    { href: "/super-admin/dashboard", label: "Dashboard" },
+    { href: "/super-admin/organizations", label: "Organizations" },
+    { href: "/super-admin/users", label: "Users" },
+    { href: "/super-admin/settings", label: "Settings" },
+  ],
+};
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -76,15 +92,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const visibleItems = useMemo(
-    () =>
-      navItems.filter((item) => {
-        if (!item.roles) return true;
-        if (!userRole) return false;
-        return item.roles.includes(userRole);
-      }),
-    [userRole],
-  );
+  const visibleItems = useMemo(() => (userRole ? roleNavItems[userRole] : []), [userRole]);
 
   return (
     <div className="min-h-screen bg-snap-bgDeep text-snap-textMain md:flex">

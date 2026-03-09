@@ -14,6 +14,10 @@ begin
     create type record_status as enum ('active', 'inactive');
   end if;
 
+  if not exists (select 1 from pg_type where typname = 'project_status') then
+    create type project_status as enum ('active', 'archived');
+  end if;
+
   if not exists (select 1 from pg_type where typname = 'category_request_status') then
     create type category_request_status as enum ('pending', 'approved', 'rejected');
   end if;
@@ -50,7 +54,7 @@ create table if not exists projects (
   period_type text not null,
   selected_columns jsonb not null default '[]'::jsonb,
   custom_column_labels jsonb not null default '{}'::jsonb,
-  status record_status not null default 'active',
+  status project_status not null default 'active',
   created_at timestamptz not null default now(),
   created_by uuid references user_profiles(id) on delete set null
 );

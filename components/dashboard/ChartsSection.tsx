@@ -50,13 +50,21 @@ function FilterSelect({
   );
 }
 
-export function ChartsSection() {
+type ChartsSectionProps = {
+  projectId?: string;
+};
+
+export function ChartsSection({ projectId }: ChartsSectionProps) {
   return (
     <section className="rounded-2xl border border-snap-border bg-snap-card p-8">
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
         <ChartCard
           title="Total Spend by Period"
-          subtitle="Analyze spending trends over time and compare by project."
+          subtitle={
+            projectId
+              ? `Analyze spending trends for project ${projectId}.`
+              : "Analyze spending trends over time and compare by project."
+          }
           filters={
             <>
               <FilterSelect
@@ -74,7 +82,11 @@ export function ChartsSection() {
 
         <ChartCard
           title="Spend by Category"
-          subtitle="Track allocation by vendor category and expense type."
+          subtitle={
+            projectId
+              ? "Track category allocation for this project."
+              : "Track allocation by vendor category and expense type."
+          }
           filters={
             <FilterSelect
               label="Project"

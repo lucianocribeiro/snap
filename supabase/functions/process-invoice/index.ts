@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { DocumentProcessorServiceClient } from "npm:@google-cloud/documentai@8";
 
 type OCRRequestBody = {
   fileUrl: string;
@@ -69,6 +68,59 @@ function toStoragePath(fileUrl: string) {
   return parts.slice(2).join("/");
 }
 
+async function getGoogleAccessToken(credentialsJson: string): Promise<string> {
+  const credentials = JSON.parse(credentialsJson);
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: credentials.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encode = (obj: object) =>
+    btoa(JSON.stringify(obj)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  const headerB64 = encode(header);
+  const payloadB64 = encode(payload);
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const pemContents = credentials.private_key
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\n/g, "");
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryKey,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(signingInput),
+  );
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+
+  const jwt = `${signingInput}.${signatureB64}`;
+
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  });
+  const tokenData = await tokenResponse.json();
+  return tokenData.access_token;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -86,7 +138,7 @@ Deno.serve(async (request) => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const credentialsJson = Deno.env.get("GOOGLE_APPLICATION_CREDENTIALS_JSON");
     const projectId = Deno.env.get("GOOGLE_DOCUMENT_AI_PROJECT_ID");
-    const location = Deno.env.get("GOOGLE_DOCUMENT_AI_LOCATION");
+    const location = Deno.env.get("GOOGLE_DOCUMENT_AI_LOCATION") ?? "us";
     const processorId = Deno.env.get("GOOGLE_DOCUMENT_AI_PROCESSOR_ID");
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -158,24 +210,35 @@ Deno.serve(async (request) => {
       throw new Error(`Failed to download invoice file: ${downloadError?.message ?? "unknown error"}`);
     }
 
-    const bytes = new Uint8Array(await fileData.arrayBuffer());
-    const base64Content = btoa(String.fromCharCode(...bytes));
-
-    const credentials = JSON.parse(credentialsJson);
-    const documentClient = new DocumentProcessorServiceClient({ credentials });
-    const processorName = `projects/${projectId}/locations/${location}/processors/${processorId}/processorVersions/pretrained-invoice-v2.0-2023-12-06`;
-
     console.log("Step 4: Calling Document AI...");
-    const response = await documentClient.processDocument({
-      name: processorName,
-      rawDocument: {
-        content: base64Content,
-        mimeType: fileData.type || "application/pdf",
+    const accessToken = await getGoogleAccessToken(credentialsJson);
+    const fileBuffer = await fileData.arrayBuffer();
+    const base64File = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+    const docAiUrl =
+      `https://${location}-documentai.googleapis.com/v1/projects/${projectId}/locations/${location}/processors/${processorId}:process`;
+
+    const docAiResponse = await fetch(docAiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        rawDocument: {
+          content: base64File,
+          mimeType: fileData.type || "application/pdf",
+        },
+      }),
     });
 
+    if (!docAiResponse.ok) {
+      const errorBody = await docAiResponse.text();
+      throw new Error(`Document AI request failed (${docAiResponse.status}): ${errorBody}`);
+    }
+
+    const docAiResult = await docAiResponse.json();
     console.log("Step 5: Processing response...");
-    const document = response[0]?.document;
+    const document = docAiResult.document;
     const pages = document?.pages ?? [];
     const entities = document?.entities ?? [];
     const text = document?.text ?? "";

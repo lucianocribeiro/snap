@@ -118,24 +118,15 @@ Deno.serve(async (request) => {
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!jwt) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      });
-    }
-
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const token = authHeader.replace("Bearer ", "");
     const {
       data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(jwt);
+      error: authError,
+    } = await supabase.auth.getUser(token);
 
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized request." }), {
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
@@ -145,7 +136,7 @@ Deno.serve(async (request) => {
       .from("user_profiles")
       .select("organization_id")
       .eq("id", user.id)
-      .maybeSingle();
+      .single();
 
     const organizationId = profile?.organization_id;
     if (!organizationId) {

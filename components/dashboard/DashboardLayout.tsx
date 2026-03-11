@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 
 type DashboardLayoutProps = {
@@ -91,27 +91,41 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { user, userRole, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const visibleItems = useMemo(() => (userRole ? roleNavItems[userRole] : []), [userRole]);
 
+  useEffect(() => {
+    const storedValue = window.localStorage.getItem("snap.sidebarCollapsed");
+    if (storedValue === "1") {
+      setSidebarCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("snap.sidebarCollapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
+
   return (
     <div className="min-h-screen bg-snap-bgDeep text-snap-textMain md:flex">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-snap-border bg-snap-bgSecondary md:flex">
-        <div className="flex h-16 items-center border-b border-snap-border px-5">
-          <Image
-            src="/logo.png"
-            alt="Snap logo"
-            width={168}
-            height={45}
-            className="h-[2.8rem] w-auto"
-            priority
-          />
-        </div>
-        <div className="px-3 py-4">
-          <SidebarNav items={visibleItems} pathname={pathname} />
-        </div>
-      </aside>
+      {!sidebarCollapsed ? (
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-snap-border bg-snap-bgSecondary md:flex">
+          <div className="flex h-16 items-center border-b border-snap-border px-5">
+            <Image
+              src="/logo.png"
+              alt="Snap logo"
+              width={168}
+              height={45}
+              className="h-[2.8rem] w-auto"
+              priority
+            />
+          </div>
+          <div className="px-3 py-4">
+            <SidebarNav items={visibleItems} pathname={pathname} />
+          </div>
+        </aside>
+      ) : null}
 
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="sticky top-0 z-30 h-16 border-b border-snap-border bg-snap-bgDeep">
@@ -122,6 +136,14 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:hidden"
                 aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((prev) => !prev)}
+                className="hidden rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:inline-flex"
+                aria-label={sidebarCollapsed ? "Expand sidebar menu" : "Collapse sidebar menu"}
               >
                 <Menu className="h-5 w-5" />
               </button>

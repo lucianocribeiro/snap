@@ -52,6 +52,7 @@ export function ProjectForm({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [step, setStep] = useState(1);
+  const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
@@ -71,6 +72,28 @@ export function ProjectForm({
     const labelB = PROJECT_COLUMN_LABELS[b];
     return labelA.localeCompare(labelB);
   });
+
+  const goToStep = (nextStep: number) => {
+    const boundedStep = Math.min(Math.max(nextStep, 1), PROJECT_STEPS.length);
+    setStep((currentStep) => {
+      if (currentStep === boundedStep) return currentStep;
+      setStepHistory((previousHistory) => [...previousHistory, currentStep]);
+      return boundedStep;
+    });
+  };
+
+  const goBackStep = () => {
+    setStepHistory((previousHistory) => {
+      if (previousHistory.length === 0) {
+        setStep((currentStep) => Math.max(1, currentStep - 1));
+        return previousHistory;
+      }
+
+      const targetStep = previousHistory[previousHistory.length - 1];
+      setStep(targetStep);
+      return previousHistory.slice(0, -1);
+    });
+  };
 
   const addCategory = () => {
     const normalized = normalizeCategory(categoryInput);
@@ -211,7 +234,7 @@ export function ProjectForm({
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (step < 5) {
-      setStep((prev) => Math.min(prev + 1, 5));
+      goToStep(step + 1);
       return;
     }
     await saveProject();
@@ -463,7 +486,7 @@ export function ProjectForm({
         <div className="mt-8 flex items-center justify-between border-t border-snap-border pt-5">
           <button
             type="button"
-            onClick={() => setStep((prev) => Math.max(1, prev - 1))}
+            onClick={goBackStep}
             disabled={step === 1 || isSaving}
             className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
           >

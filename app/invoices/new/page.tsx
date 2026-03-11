@@ -103,6 +103,7 @@ export default function NewInvoicePage() {
   const supabase = useMemo(() => createClient(), []);
   const { organizationId } = useAuth();
   const [step, setStep] = useState(1);
+  const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isReadingInvoice, setIsReadingInvoice] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -159,6 +160,28 @@ export default function NewInvoicePage() {
   const activeProjects = projects.filter((project) => project.status?.toLowerCase() !== "archived");
   const canContinueStep1 = Boolean(selectedProjectId);
   const canSave = Boolean(formState.categoryId && formState.status);
+
+  const goToStep = (nextStep: number) => {
+    const boundedStep = Math.min(Math.max(nextStep, 1), STEPS.length);
+    setStep((currentStep) => {
+      if (currentStep === boundedStep) return currentStep;
+      setStepHistory((previousHistory) => [...previousHistory, currentStep]);
+      return boundedStep;
+    });
+  };
+
+  const goBackStep = () => {
+    setStepHistory((previousHistory) => {
+      if (previousHistory.length === 0) {
+        setStep((currentStep) => Math.max(1, currentStep - 1));
+        return previousHistory;
+      }
+
+      const targetStep = previousHistory[previousHistory.length - 1];
+      setStep(targetStep);
+      return previousHistory.slice(0, -1);
+    });
+  };
 
   const updateField = (key: keyof InvoiceFormState, value: string) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
@@ -239,7 +262,7 @@ export default function NewInvoicePage() {
     if (uploadError) {
       setIsReadingInvoice(false);
       setToast("Could not read invoice. Please enter details manually.");
-      setStep(5);
+      goToStep(5);
       return;
     }
 
@@ -256,7 +279,7 @@ export default function NewInvoicePage() {
     if (error || !data) {
       setIsReadingInvoice(false);
       setToast("Could not read invoice. Please enter details manually.");
-      setStep(5);
+      goToStep(5);
       return;
     }
 
@@ -281,7 +304,7 @@ export default function NewInvoicePage() {
     applyInitialMappings(nextExtractedFields, nextSuggestedMappings);
 
     setIsReadingInvoice(false);
-    setStep(3);
+    goToStep(3);
   };
 
   const handleFileSelect = (nextFile: File | null) => {
@@ -617,7 +640,7 @@ export default function NewInvoicePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep(5)}
+                  onClick={() => goToStep(5)}
                   className="rounded-md border border-snap-border bg-snap-card px-3 py-2 text-sm font-medium text-snap-textMain"
                 >
                   Skip OCR / Enter manually
@@ -751,7 +774,7 @@ export default function NewInvoicePage() {
             <button
               type="button"
               disabled={step === 1 || isSaving || isReadingInvoice}
-              onClick={() => setStep((prev) => Math.max(1, prev - 1))}
+              onClick={goBackStep}
               className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
             >
               Back
@@ -762,15 +785,15 @@ export default function NewInvoicePage() {
                 disabled={isReadingInvoice || (step === 1 && !canContinueStep1)}
                 onClick={() => {
                   if (step === 3) {
-                    setStep(4);
+                    goToStep(4);
                     return;
                   }
                   if (step === 4) {
                     applyMappingsToForm();
-                    setStep(5);
+                    goToStep(5);
                     return;
                   }
-                  setStep((prev) => Math.min(5, prev + 1));
+                  goToStep(step + 1);
                 }}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
               >

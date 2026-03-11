@@ -57,16 +57,6 @@ function toText(value: number | string | null) {
   return String(value);
 }
 
-function formatAmountWithCurrency(value: string, currency: CurrencyCode) {
-  if (!value) return `- ${currency}`;
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return `${value} ${currency}`;
-  return `${new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(numeric)} ${currency}`;
-}
-
 function normalizeCurrency(value: string | null | undefined): CurrencyCode {
   const normalized = (value ?? "").toUpperCase();
   const valid = new Set(CURRENCY_OPTIONS.map((option) => option.value));
@@ -243,7 +233,7 @@ export default function InvoiceDetailPage() {
 
     if (column === "invoiceNumber") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Invoice #</label>
           <input
             value={invoice.invoiceNumber}
@@ -255,7 +245,7 @@ export default function InvoiceDetailPage() {
     }
     if (column === "vendor") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="col-span-2 space-y-2">
           <label className="text-sm text-snap-textDim">Vendor</label>
           <input
             value={invoice.vendor}
@@ -267,7 +257,7 @@ export default function InvoiceDetailPage() {
     }
     if (column === "invoiceDate") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Invoice Date</label>
           <input
             type="date"
@@ -280,7 +270,7 @@ export default function InvoiceDetailPage() {
     }
     if (column === "dueDate") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Due Date</label>
           <input
             type="date"
@@ -293,7 +283,7 @@ export default function InvoiceDetailPage() {
     }
     if (column === "amount") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Amount (excl. tax)</label>
           <input
             type="number"
@@ -302,13 +292,12 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("amount", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
-          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</p>
         </div>
       );
     }
     if (column === "tax") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Tax</label>
           <input
             type="number"
@@ -317,13 +306,12 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("tax", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
-          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.tax, invoice.currency)}</p>
         </div>
       );
     }
     if (column === "totalAmount") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">Total Amount</label>
           <input
             type="number"
@@ -332,13 +320,12 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("totalAmount", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
-          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.totalAmount, invoice.currency)}</p>
         </div>
       );
     }
     if (column === "notes") {
       return (
-        <div className="space-y-2 md:col-span-2">
+        <div key={column} className="col-span-2 space-y-2">
           <label className="text-sm text-snap-textDim">Notes</label>
           <textarea
             rows={3}
@@ -351,7 +338,7 @@ export default function InvoiceDetailPage() {
     }
     if (column === "custom1" || column === "custom2" || column === "custom3") {
       return (
-        <div className="space-y-2">
+        <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">{customLabels[column]}</label>
           <input
             value={invoice[column]}
@@ -431,10 +418,8 @@ export default function InvoiceDetailPage() {
             </article>
 
             <article className="space-y-4 rounded-xl border border-snap-border bg-snap-surface p-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
-                  <div key={column}>{renderField(column)}</div>
-                ))}
+              <div className="grid grid-cols-2 gap-4">
+                {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => renderField(column))}
 
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">Currency</label>

@@ -268,11 +268,18 @@ export default function NewInvoicePage() {
 
     setStoragePath(path);
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     const { data, error } = await supabase.functions.invoke("process-invoice", {
       body: {
         fileUrl: path,
         projectId: selectedProjectId,
         language: "en" as const,
+      },
+      headers: {
+        Authorization: `Bearer ${session?.access_token ?? ""}`,
       },
     });
 

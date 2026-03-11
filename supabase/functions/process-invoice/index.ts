@@ -110,11 +110,20 @@ Deno.serve(async (request) => {
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-    const authHeader = request.headers.get("Authorization") || "";
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!jwt) {
-      return new Response(JSON.stringify({ error: "Missing authorization token." }), {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });

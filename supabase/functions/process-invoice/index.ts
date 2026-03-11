@@ -131,6 +131,7 @@ Deno.serve(async (request) => {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
     }
+    console.log("Step 1: Auth verified, user:", user.id);
 
     const { data: profile } = await supabase
       .from("user_profiles")
@@ -139,6 +140,7 @@ Deno.serve(async (request) => {
       .single();
 
     const organizationId = profile?.organization_id;
+    console.log("Step 2: Organization ID:", profile?.organization_id);
     if (!organizationId) {
       return new Response(JSON.stringify({ error: "Organization not found for user." }), {
         status: 403,
@@ -147,6 +149,7 @@ Deno.serve(async (request) => {
     }
 
     const storagePath = toStoragePath(fileUrl);
+    console.log("Step 3: Downloading file from storage...");
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("invoices")
       .download(storagePath);
@@ -162,7 +165,8 @@ Deno.serve(async (request) => {
     const documentClient = new DocumentProcessorServiceClient({ credentials });
     const processorName = `projects/${projectId}/locations/${location}/processors/${processorId}/processorVersions/pretrained-invoice-v2.0-2023-12-06`;
 
-    const [result] = await documentClient.processDocument({
+    console.log("Step 4: Calling Document AI...");
+    const response = await documentClient.processDocument({
       name: processorName,
       rawDocument: {
         content: base64Content,
@@ -170,7 +174,19 @@ Deno.serve(async (request) => {
       },
     });
 
-    const entities = result.document?.entities ?? [];
+    console.log("Step 5: Processing response...");
+    const document = response[0]?.document;
+    const pages = document?.pages ?? [];
+    const entities = document?.entities ?? [];
+    const text = document?.text ?? "";
+    const pageCount = pages.length;
+    const textLength = text.length;
+    console.log("Step 5.1: Parsed document primitives:", {
+      pageCount,
+      entityCount: entities.length,
+      textLength,
+    });
+
     const extractedFields: ExtractedField[] = entities
       .map((entity) => {
         const mappedKey = ENTITY_KEY_MAP[entity.type ?? ""];
@@ -210,20 +226,32 @@ Deno.serve(async (request) => {
       }
     }
 
+    const payload = {
+      extractedFields: extractedFields.map((field) => ({
+        key: field.key,
+        label: field.label,
+        value: field.value,
+        confidence: field.confidence,
+      })),
+      suggestedMappings: suggestedMappings.map((mapping) => ({
+        extractedKey: mapping.extractedKey,
+        projectColumn: mapping.projectColumn,
+      })),
+      vendorName,
+    };
+
     return new Response(
-      JSON.stringify({
-        extractedFields,
-        suggestedMappings,
-        vendorName,
-      }),
+      JSON.stringify(payload),
       {
         status: 200,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return new Response(JSON.stringify({ error: message }), {
+    console.error("Function error:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });

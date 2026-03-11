@@ -252,6 +252,9 @@ Deno.serve(async (request) => {
     const pages = document?.pages ?? [];
     const entities = document?.entities ?? [];
     const text = document?.text ?? "";
+    const overallConfidence = entities.length > 0
+      ? entities.reduce((sum: number, e: any) => sum + (e.confidence ?? 0), 0) / entities.length
+      : 0;
     const pageCount = pages.length;
     const textLength = text.length;
     console.log("Step 5.1: Parsed document primitives:", {
@@ -311,6 +314,7 @@ Deno.serve(async (request) => {
         projectColumn: mapping.projectColumn,
       })),
       vendorName,
+      overallConfidence,
     };
 
     return new Response(

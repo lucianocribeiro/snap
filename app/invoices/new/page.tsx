@@ -98,6 +98,17 @@ function isProjectColumn(value: string): value is ProjectColumn {
   return Object.prototype.hasOwnProperty.call(PROJECT_COLUMN_LABELS, value);
 }
 
+function toInputDateFormat(value: string | undefined): string {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parts = value.split("/");
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return "";
+}
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -107,6 +118,7 @@ export default function NewInvoicePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReadingInvoice, setIsReadingInvoice] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [invoiceValidationError, setInvoiceValidationError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
@@ -243,6 +255,7 @@ export default function NewInvoicePage() {
     }
 
     setToast(null);
+    setInvoiceValidationError(null);
     setIsReadingInvoice(true);
 
     const nextPreviewUrl = URL.createObjectURL(nextFile);
@@ -304,6 +317,13 @@ export default function NewInvoicePage() {
     }));
 
     const nextSuggestedMappings = (data.suggestedMappings as ColumnMapping[] | undefined) ?? [];
+    const overallConfidence = typeof data.overallConfidence === "number" ? data.overallConfidence : 0;
+
+    if (overallConfidence < 0.3 && nextExtractedFields.length < 3) {
+      setIsReadingInvoice(false);
+      setInvoiceValidationError("This does not appear to be an invoice. Please upload a valid invoice file.");
+      return;
+    }
 
     setExtractedFields(nextExtractedFields);
     setSuggestedMappings(nextSuggestedMappings);
@@ -311,6 +331,7 @@ export default function NewInvoicePage() {
     applyInitialMappings(nextExtractedFields, nextSuggestedMappings);
 
     setIsReadingInvoice(false);
+    setInvoiceValidationError(null);
     goToStep(3);
   };
 
@@ -332,12 +353,15 @@ export default function NewInvoicePage() {
       valuesByTarget[target] = field.value;
     });
 
+    const mappedInvoiceDate = toInputDateFormat(valuesByTarget.invoiceDate);
+    const mappedDueDate = toInputDateFormat(valuesByTarget.dueDate);
+
     setFormState((prev) => ({
       ...prev,
       invoiceNumber: valuesByTarget.invoiceNumber ?? prev.invoiceNumber,
       vendor: valuesByTarget.vendor ?? prev.vendor,
-      invoiceDate: valuesByTarget.invoiceDate ?? prev.invoiceDate,
-      dueDate: valuesByTarget.dueDate ?? prev.dueDate,
+      invoiceDate: mappedInvoiceDate || prev.invoiceDate,
+      dueDate: mappedDueDate || prev.dueDate,
       amount: valuesByTarget.amount ?? prev.amount,
       tax: valuesByTarget.tax ?? prev.tax,
       totalAmount: valuesByTarget.totalAmount ?? prev.totalAmount,
@@ -653,6 +677,21 @@ export default function NewInvoicePage() {
                   Skip OCR / Enter manually
                 </button>
               </div>
+
+              {invoiceValidationError ? (
+                <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+                  <div className="flex items-start justify-between gap-3">
+                    <p>{invoiceValidationError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceValidationError(null)}
+                      className="text-xs font-medium text-red-200 underline underline-offset-2 hover:text-red-100"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

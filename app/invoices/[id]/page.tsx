@@ -73,6 +73,13 @@ function normalizeCurrency(value: string | null | undefined): CurrencyCode {
   return valid.has(normalized as CurrencyCode) ? (normalized as CurrencyCode) : "USD";
 }
 
+function getFileExtension(path: string | null) {
+  if (!path) return "";
+  const normalized = path.toLowerCase().split("?")[0];
+  const parts = normalized.split(".");
+  return parts.length > 1 ? parts[parts.length - 1] : "";
+}
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -86,6 +93,8 @@ export default function InvoiceDetailPage() {
   const [customLabels, setCustomLabels] = useState({ custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3" });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [uploaderName, setUploaderName] = useState<string>("Unknown user");
+  const [signedFileUrl, setSignedFileUrl] = useState<string | null>(null);
+  const [filePreviewError, setFilePreviewError] = useState(false);
 
   const canDelete = userRole === "org_admin";
 
@@ -109,9 +118,21 @@ export default function InvoiceDetailPage() {
 
       if (!invoiceRow) {
         setInvoice(null);
+        setSignedFileUrl(null);
         setLoading(false);
         return;
       }
+
+      let nextSignedFileUrl: string | null = null;
+      if (invoiceRow.original_file_url) {
+        const { data: signedUrlData } = await supabase
+          .storage
+          .from("invoices")
+          .createSignedUrl(invoiceRow.original_file_url, 3600);
+        nextSignedFileUrl = signedUrlData?.signedUrl ?? null;
+      }
+      setSignedFileUrl(nextSignedFileUrl);
+      setFilePreviewError(false);
 
       const [{ data: projectRow }, { data: categoryRows }] = await Promise.all([
         supabase
@@ -370,23 +391,31 @@ export default function InvoiceDetailPage() {
           <section className="grid gap-6 lg:grid-cols-[1.1fr_1.3fr]">
             <article className="space-y-4 rounded-xl border border-snap-border bg-snap-surface p-5">
               <h2 className="text-base font-semibold text-snap-textMain">Original File</h2>
-              {invoice.originalFileUrl ? (
+              {signedFileUrl && !filePreviewError ? (
                 <div className="space-y-3">
-                  {invoice.originalFileUrl.endsWith(".pdf") ? (
+                  {getFileExtension(invoice.originalFileUrl) === "pdf" ? (
                     <iframe
                       title="Invoice file"
-                      src={invoice.originalFileUrl}
+                      src={signedFileUrl}
+                      onError={() => setFilePreviewError(true)}
                       className="h-80 w-full rounded border border-snap-border"
                     />
-                  ) : (
+                  ) : getFileExtension(invoice.originalFileUrl) === "jpg" ||
+                      getFileExtension(invoice.originalFileUrl) === "jpeg" ||
+                      getFileExtension(invoice.originalFileUrl) === "png" ? (
                     <img
-                      src={invoice.originalFileUrl}
+                      src={signedFileUrl}
                       alt="Invoice file"
+                      onError={() => setFilePreviewError(true)}
                       className="max-h-80 w-full rounded border border-snap-border object-contain"
                     />
+                  ) : (
+                    <div className="rounded-md border border-dashed border-snap-border bg-snap-bg p-8 text-sm text-snap-textDim">
+                      Preview not available
+                    </div>
                   )}
                   <a
-                    href={invoice.originalFileUrl}
+                    href={signedFileUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-block text-sm text-snap-textMain underline"
@@ -396,7 +425,7 @@ export default function InvoiceDetailPage() {
                 </div>
               ) : (
                 <div className="rounded-md border border-dashed border-snap-border bg-snap-bg p-8 text-sm text-snap-textDim">
-                  No original file available for this invoice.
+                  Preview not available
                 </div>
               )}
             </article>

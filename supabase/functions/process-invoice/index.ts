@@ -121,6 +121,16 @@ async function getGoogleAccessToken(credentialsJson: string): Promise<string> {
   return tokenData.access_token;
 }
 
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 1024;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -213,7 +223,7 @@ Deno.serve(async (request) => {
     console.log("Step 4: Calling Document AI...");
     const accessToken = await getGoogleAccessToken(credentialsJson);
     const fileBuffer = await fileData.arrayBuffer();
-    const base64File = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+    const base64File = uint8ArrayToBase64(new Uint8Array(fileBuffer));
     const docAiUrl =
       `https://${location}-documentai.googleapis.com/v1/projects/${projectId}/locations/${location}/processors/${processorId}:process`;
 

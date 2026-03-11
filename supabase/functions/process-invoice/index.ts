@@ -33,6 +33,7 @@ const ENTITY_KEY_MAP: Record<string, string> = {
   vat_tax_amount: "tax",
   invoice_id: "invoiceNumber",
   due_date: "dueDate",
+  currency_code: "currency",
 };
 
 const ENTITY_LABEL_MAP: Record<string, string> = {
@@ -43,6 +44,7 @@ const ENTITY_LABEL_MAP: Record<string, string> = {
   tax: "Tax",
   invoiceNumber: "Invoice #",
   dueDate: "Due Date",
+  currency: "Currency",
 };
 
 function mapConfidence(value = 0): "high" | "medium" | "low" {

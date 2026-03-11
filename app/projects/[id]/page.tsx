@@ -81,7 +81,7 @@ export default function ProjectDetailPage() {
           supabase.from("categories").select("id, name").eq("project_id", projectId).order("name"),
           supabase
             .from("invoices")
-            .select("id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, status")
+            .select("id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, currency, status")
             .eq("project_id", projectId)
             .order("uploaded_at", { ascending: false }),
         ]);
@@ -122,6 +122,7 @@ export default function ProjectDetailPage() {
           amount: invoice.amount,
           tax: invoice.tax,
           totalAmount: invoice.total_amount,
+          currency: invoice.currency?.toUpperCase() ?? "USD",
           status: invoice.status === "paid" ? "Paid" : "Unpaid",
         })),
       );

@@ -11,6 +11,16 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
 type CategoryOption = { id: string; name: string };
+type CurrencyCode = "USD" | "ARS" | "EUR" | "GBP" | "BRL" | "UYU";
+
+const CURRENCY_OPTIONS: Array<{ value: CurrencyCode; label: string }> = [
+  { value: "USD", label: "USD - US Dollar" },
+  { value: "ARS", label: "ARS - Argentine Peso" },
+  { value: "EUR", label: "EUR - Euro" },
+  { value: "GBP", label: "GBP - British Pound" },
+  { value: "BRL", label: "BRL - Brazilian Real" },
+  { value: "UYU", label: "UYU - Uruguayan Peso" },
+];
 
 type EditableInvoice = {
   id: string;
@@ -22,6 +32,7 @@ type EditableInvoice = {
   amount: string;
   tax: string;
   totalAmount: string;
+  currency: CurrencyCode;
   categoryId: string;
   status: "paid" | "unpaid";
   notes: string;
@@ -44,6 +55,22 @@ function formatDateTime(value: string | null) {
 function toText(value: number | string | null) {
   if (value === null || value === undefined) return "";
   return String(value);
+}
+
+function formatAmountWithCurrency(value: string, currency: CurrencyCode) {
+  if (!value) return `- ${currency}`;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return `${value} ${currency}`;
+  return `${new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numeric)} ${currency}`;
+}
+
+function normalizeCurrency(value: string | null | undefined): CurrencyCode {
+  const normalized = (value ?? "").toUpperCase();
+  const valid = new Set(CURRENCY_OPTIONS.map((option) => option.value));
+  return valid.has(normalized as CurrencyCode) ? (normalized as CurrencyCode) : "USD";
 }
 
 export default function InvoiceDetailPage() {
@@ -75,7 +102,7 @@ export default function InvoiceDetailPage() {
       const { data: invoiceRow } = await supabase
         .from("invoices")
         .select(
-          "id, project_id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, category_id, status, notes, custom1, custom2, custom3, original_file_url, uploaded_at, uploaded_by, last_edited_at",
+          "id, project_id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, currency, category_id, status, notes, custom1, custom2, custom3, original_file_url, uploaded_at, uploaded_by, last_edited_at",
         )
         .eq("id", params.id)
         .maybeSingle();
@@ -126,6 +153,7 @@ export default function InvoiceDetailPage() {
         amount: toText(invoiceRow.amount),
         tax: toText(invoiceRow.tax),
         totalAmount: toText(invoiceRow.total_amount),
+        currency: normalizeCurrency(invoiceRow.currency),
         categoryId: invoiceRow.category_id ?? "",
         status: invoiceRow.status === "paid" ? "paid" : "unpaid",
         notes: invoiceRow.notes ?? "",
@@ -164,6 +192,7 @@ export default function InvoiceDetailPage() {
         amount,
         tax,
         total_amount: totalAmount,
+        currency: invoice.currency,
         category_id: invoice.categoryId || null,
         status: invoice.status,
         notes: invoice.notes || null,
@@ -252,6 +281,7 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("amount", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
+          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</p>
         </div>
       );
     }
@@ -266,6 +296,7 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("tax", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
+          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.tax, invoice.currency)}</p>
         </div>
       );
     }
@@ -280,6 +311,7 @@ export default function InvoiceDetailPage() {
             onChange={(event) => updateField("totalAmount", event.target.value)}
             className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
           />
+          <p className="text-xs text-snap-textDim">{formatAmountWithCurrency(invoice.totalAmount, invoice.currency)}</p>
         </div>
       );
     }
@@ -374,6 +406,21 @@ export default function InvoiceDetailPage() {
                 {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
                   <div key={column}>{renderField(column)}</div>
                 ))}
+
+                <div className="space-y-2">
+                  <label className="text-sm text-snap-textDim">Currency</label>
+                  <select
+                    value={invoice.currency}
+                    onChange={(event) => updateField("currency", event.target.value as CurrencyCode)}
+                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  >
+                    {CURRENCY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">Category</label>

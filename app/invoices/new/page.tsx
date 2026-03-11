@@ -21,6 +21,8 @@ type CategoryOption = {
   name: string;
 };
 
+type CurrencyCode = "USD" | "ARS" | "EUR" | "GBP" | "BRL" | "UYU";
+
 type InvoiceFormState = {
   invoiceNumber: string;
   vendor: string;
@@ -29,6 +31,7 @@ type InvoiceFormState = {
   amount: string;
   tax: string;
   totalAmount: string;
+  currency: CurrencyCode;
   categoryId: string;
   status: "paid" | "unpaid";
   notes: string;
@@ -51,6 +54,14 @@ type ColumnMapping = {
 };
 
 const STEPS = ["Select Project", "Upload", "Review Extraction", "Map Columns", "Confirm"];
+const CURRENCY_OPTIONS: Array<{ value: CurrencyCode; label: string }> = [
+  { value: "USD", label: "USD - US Dollar" },
+  { value: "ARS", label: "ARS - Argentine Peso" },
+  { value: "EUR", label: "EUR - Euro" },
+  { value: "GBP", label: "GBP - British Pound" },
+  { value: "BRL", label: "BRL - Brazilian Real" },
+  { value: "UYU", label: "UYU - Uruguayan Peso" },
+];
 
 const INITIAL_FORM: InvoiceFormState = {
   invoiceNumber: "",
@@ -60,6 +71,7 @@ const INITIAL_FORM: InvoiceFormState = {
   amount: "",
   tax: "",
   totalAmount: "",
+  currency: "USD",
   categoryId: "",
   status: "unpaid",
   notes: "",
@@ -107,6 +119,12 @@ function toInputDateFormat(value: string | undefined): string {
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
   return "";
+}
+
+function normalizeCurrency(value: string | undefined): CurrencyCode {
+  const normalized = (value ?? "").trim().toUpperCase();
+  const validOptions = new Set(CURRENCY_OPTIONS.map((option) => option.value));
+  return validOptions.has(normalized as CurrencyCode) ? (normalized as CurrencyCode) : "USD";
 }
 
 export default function NewInvoicePage() {
@@ -318,6 +336,7 @@ export default function NewInvoicePage() {
 
     const nextSuggestedMappings = (data.suggestedMappings as ColumnMapping[] | undefined) ?? [];
     const overallConfidence = typeof data.overallConfidence === "number" ? data.overallConfidence : 0;
+    const extractedCurrency = nextExtractedFields.find((field) => field.key === "currency")?.value;
 
     if (overallConfidence < 0.3 && nextExtractedFields.length < 3) {
       setIsReadingInvoice(false);
@@ -329,6 +348,7 @@ export default function NewInvoicePage() {
     setSuggestedMappings(nextSuggestedMappings);
     setVendorNameFromOCR((data.vendorName as string | null) ?? null);
     applyInitialMappings(nextExtractedFields, nextSuggestedMappings);
+    setFormState((prev) => ({ ...prev, currency: normalizeCurrency(extractedCurrency) }));
 
     setIsReadingInvoice(false);
     setInvoiceValidationError(null);
@@ -438,6 +458,7 @@ export default function NewInvoicePage() {
       amount,
       tax,
       total_amount: Number.isFinite(totalAmount) ? totalAmount : null,
+      currency: formState.currency,
       category_id: formState.categoryId,
       status: formState.status,
       notes: formState.notes || null,
@@ -784,6 +805,21 @@ export default function NewInvoicePage() {
                 {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
                   <div key={column}>{renderField(column)}</div>
                 ))}
+
+                <div className="space-y-2">
+                  <label className="text-sm text-snap-textDim">Currency</label>
+                  <select
+                    value={formState.currency}
+                    onChange={(event) => updateField("currency", event.target.value as CurrencyCode)}
+                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  >
+                    {CURRENCY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">Category *</label>

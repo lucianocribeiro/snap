@@ -21,6 +21,7 @@ type InvoiceRecord = {
   amount: number | null;
   tax: number | null;
   total_amount: number | null;
+  currency: string | null;
   status: string | null;
 };
 
@@ -65,7 +66,7 @@ export default function InvoicesPage() {
         supabase
           .from("invoices")
           .select(
-            "id, project_id, category_id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, status",
+            "id, project_id, category_id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, currency, status",
           )
           .order("uploaded_at", { ascending: false }),
       ]);
@@ -87,6 +88,7 @@ export default function InvoicesPage() {
           amount: invoice.amount,
           tax: invoice.tax,
           totalAmount: invoice.total_amount,
+          currency: invoice.currency?.toUpperCase() ?? "USD",
           status: invoice.status === "paid" ? "Paid" : "Unpaid",
         })),
       );

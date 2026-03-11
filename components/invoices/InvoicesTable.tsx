@@ -13,6 +13,7 @@ export type InvoiceTableRow = {
   amount: number | null;
   tax: number | null;
   totalAmount: number | null;
+  currency: string;
   status: "Paid" | "Unpaid";
 };
 
@@ -23,9 +24,13 @@ type InvoicesTableProps = {
   onDelete?: (invoice: InvoiceTableRow) => void;
 };
 
-function formatCurrency(value: number | null) {
+function formatAmountWithCurrency(value: number | null, currency: string) {
   if (typeof value !== "number") return "-";
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(value);
+  const numeric = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `${numeric} ${currency}`;
 }
 
 function formatDate(value: string | null) {
@@ -90,9 +95,11 @@ export function InvoicesTable({
               <td className="px-4 py-4 text-sm text-snap-textDim">{invoice.categoryName || "-"}</td>
               <td className="px-4 py-4 text-sm text-snap-textDim">{formatDate(invoice.invoiceDate)}</td>
               <td className="px-4 py-4 text-sm text-snap-textDim">{formatDate(invoice.dueDate)}</td>
-              <td className="px-4 py-4 text-sm text-snap-textDim">{formatCurrency(invoice.amount)}</td>
-              <td className="px-4 py-4 text-sm text-snap-textDim">{formatCurrency(invoice.tax)}</td>
-              <td className="px-4 py-4 text-sm text-snap-textDim">{formatCurrency(invoice.totalAmount)}</td>
+              <td className="px-4 py-4 text-sm text-snap-textDim">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</td>
+              <td className="px-4 py-4 text-sm text-snap-textDim">{formatAmountWithCurrency(invoice.tax, invoice.currency)}</td>
+              <td className="px-4 py-4 text-sm text-snap-textDim">
+                {formatAmountWithCurrency(invoice.totalAmount, invoice.currency)}
+              </td>
               <td className="px-4 py-4 text-sm">
                 <StatusBadge status={invoice.status} variant="invoice" />
               </td>

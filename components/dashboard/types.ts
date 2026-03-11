@@ -48,6 +48,7 @@ export type Invoice = {
   vendor: string;
   project: string;
   amount: string;
+  currency: string;
   date: string;
   status: InvoiceStatus;
   notes: string;

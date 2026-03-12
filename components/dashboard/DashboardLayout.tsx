@@ -22,6 +22,7 @@ const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/projects", label: "Projects" },
     { href: "/invoices", label: "Invoices" },
+    { href: "/reports", label: "Reports" },
     { href: "/users", label: "Users" },
     { href: "/categories", label: "Categories" },
     { href: "/settings", label: "Settings" },

@@ -161,17 +161,26 @@ export default function ReportsPage() {
 
       setLoadingPreview(true);
 
+      const selectedPeriods = selectedPeriodIds.filter(Boolean);
+      const selectedCategories = selectedCategoryIds.filter(Boolean);
+      console.log("[Reports] invoices query params", {
+        projectId: selectedProjectId,
+        selectedPeriods,
+        selectedCategories,
+        selectedStatus,
+      });
+
       let query = supabase.from("invoices").select("*").eq("project_id", selectedProjectId);
 
-      if (selectedPeriodIds.length > 0) {
-        query = query.in("period_id", selectedPeriodIds);
+      if (selectedPeriods.length > 0) {
+        query = query.in("period_id", selectedPeriods);
       }
 
-      if (selectedCategoryIds.length > 0) {
-        query = query.in("category_id", selectedCategoryIds);
+      if (selectedCategories.length > 0) {
+        query = query.in("category_id", selectedCategories);
       }
 
-      if (selectedStatus !== "all") {
+      if (selectedStatus === "paid" || selectedStatus === "unpaid") {
         query = query.eq("status", selectedStatus);
       }
 

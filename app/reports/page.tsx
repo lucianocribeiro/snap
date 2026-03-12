@@ -161,13 +161,7 @@ export default function ReportsPage() {
 
       setLoadingPreview(true);
 
-      let query = supabase
-        .from("invoices")
-        .select(
-          "id, period_id, category_id, invoice_number, vendor, invoice_date, due_date, amount, tax, total_amount, currency, status, notes, custom1, custom2, custom3",
-        )
-        .eq("project_id", selectedProjectId)
-        .order("uploaded_at", { ascending: false });
+      let query = supabase.from("invoices").select("*").eq("project_id", selectedProjectId);
 
       if (selectedPeriodIds.length > 0) {
         query = query.in("period_id", selectedPeriodIds);
@@ -181,7 +175,14 @@ export default function ReportsPage() {
         query = query.eq("status", selectedStatus);
       }
 
-      const { data } = await query;
+      query = query.order("uploaded_at", { ascending: false });
+
+      const { data, error } = await query;
+      console.log("[Reports] invoices query result", {
+        selectedProjectId,
+        invoiceCount: data?.length ?? 0,
+        error,
+      });
       setInvoices((data as InvoiceRow[] | null) ?? []);
       setLoadingPreview(false);
     };

@@ -13,6 +13,8 @@ import { createClient } from "@/lib/supabase/client";
 type ProjectOption = {
   id: string;
   name: string;
+  period_type: string | null;
+  created_at: string | null;
   selected_columns: ProjectColumn[] | null;
   custom_column_labels: { custom1?: string; custom2?: string; custom3?: string } | null;
 };
@@ -20,6 +22,8 @@ type ProjectOption = {
 type ProjectPeriod = {
   id: string;
   name: string;
+  startDate: string;
+  endDate: string;
 };
 
 type CategoryOption = {
@@ -74,6 +78,77 @@ function sanitizeFileNamePart(value: string) {
   return value.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "");
 }
 
+function toIsoDate(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfWeekMonday(value: Date) {
+  const date = new Date(value);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function generateMonthlyPeriods(createdAt: string): ProjectPeriod[] {
+  const periods: ProjectPeriod[] = [];
+  const start = new Date(createdAt);
+  if (Number.isNaN(start.getTime())) return periods;
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date();
+  end.setDate(1);
+  end.setHours(0, 0, 0, 0);
+
+  while (start <= end) {
+    const monthStart = new Date(start);
+    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    periods.push({
+      id: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`,
+      name: monthStart.toLocaleString("default", { month: "long", year: "numeric" }),
+      startDate: toIsoDate(monthStart),
+      endDate: toIsoDate(monthEnd),
+    });
+    start.setMonth(start.getMonth() + 1);
+  }
+
+  return periods;
+}
+
+function generateWeeklyPeriods(createdAt: string): ProjectPeriod[] {
+  const periods: ProjectPeriod[] = [];
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return periods;
+
+  let cursor = startOfWeekMonday(created);
+  const currentWeekStart = startOfWeekMonday(new Date());
+
+  while (cursor <= currentWeekStart) {
+    const weekStart = new Date(cursor);
+    const weekEnd = addDays(weekStart, 6);
+    periods.push({
+      id: toIsoDate(weekStart),
+      name: `Week of ${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`,
+      startDate: toIsoDate(weekStart),
+      endDate: toIsoDate(weekEnd),
+    });
+    cursor = addDays(cursor, 7);
+  }
+
+  return periods;
+}
+
 export default function ReportsPage() {
   const supabase = useMemo(() => createClient(), []);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -105,7 +180,7 @@ export default function ReportsPage() {
       setLoadingProjects(true);
       const { data } = await supabase
         .from("projects")
-        .select("id, name, selected_columns, custom_column_labels")
+        .select("id, name, period_type, created_at, selected_columns, custom_column_labels")
         .order("name", { ascending: true });
 
       setProjects((data as ProjectOption[] | null) ?? []);
@@ -140,12 +215,38 @@ export default function ReportsPage() {
       setSelectedPeriodIds([]);
       setSelectedCategoryIds([]);
 
-      const [{ data: periodRows }, { data: categoryRows }] = await Promise.all([
-        supabase.from("project_periods").select("id, name").eq("project_id", selectedProjectId).order("start_date"),
-        supabase.from("categories").select("id, name").eq("project_id", selectedProjectId).order("name"),
-      ]);
+      const projectPeriodType = (selectedProject?.period_type ?? "").toLowerCase();
+      const { data: categoryRows } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("project_id", selectedProjectId)
+        .order("name");
 
-      setPeriods((periodRows as ProjectPeriod[] | null) ?? []);
+      if (projectPeriodType === "custom") {
+        const { data: periodRows } = await supabase
+          .from("project_periods")
+          .select("id, name, start_date, end_date")
+          .eq("project_id", selectedProjectId)
+          .order("start_date");
+
+        setPeriods(
+          ((periodRows as Array<{ id: string; name: string; start_date: string; end_date: string }> | null) ?? []).map(
+            (period) => ({
+              id: period.id,
+              name: period.name,
+              startDate: period.start_date,
+              endDate: period.end_date,
+            }),
+          ),
+        );
+      } else if (projectPeriodType === "monthly") {
+        setPeriods(selectedProject?.created_at ? generateMonthlyPeriods(selectedProject.created_at) : []);
+      } else if (projectPeriodType === "weekly") {
+        setPeriods(selectedProject?.created_at ? generateWeeklyPeriods(selectedProject.created_at) : []);
+      } else {
+        setPeriods([]);
+      }
+
       setCategories((categoryRows as CategoryOption[] | null) ?? []);
     };
 
@@ -163,8 +264,11 @@ export default function ReportsPage() {
 
       const selectedPeriods = selectedPeriodIds.filter(Boolean);
       const selectedCategories = selectedCategoryIds.filter(Boolean);
+      const projectPeriodType = (selectedProject?.period_type ?? "").toLowerCase();
+      const periodRangeById = new Map(periods.map((period) => [period.id, period]));
       console.log("[Reports] invoices query params", {
         projectId: selectedProjectId,
+        periodType: projectPeriodType,
         selectedPeriods,
         selectedCategories,
         selectedStatus,
@@ -172,7 +276,7 @@ export default function ReportsPage() {
 
       let query = supabase.from("invoices").select("*").eq("project_id", selectedProjectId);
 
-      if (selectedPeriods.length > 0) {
+      if (projectPeriodType === "custom" && selectedPeriods.length > 0) {
         query = query.in("period_id", selectedPeriods);
       }
 
@@ -187,17 +291,36 @@ export default function ReportsPage() {
       query = query.order("uploaded_at", { ascending: false });
 
       const { data, error } = await query;
+      const queriedRows = (data as InvoiceRow[] | null) ?? [];
+      const rows =
+        (projectPeriodType === "monthly" || projectPeriodType === "weekly") && selectedPeriods.length > 0
+          ? queriedRows.filter((invoice) => {
+              if (!invoice.invoice_date) return false;
+              const invoiceDate = new Date(invoice.invoice_date);
+              if (Number.isNaN(invoiceDate.getTime())) return false;
+
+              return selectedPeriods.some((periodId) => {
+                const period = periodRangeById.get(periodId);
+                if (!period) return false;
+                const start = new Date(period.startDate);
+                const end = new Date(period.endDate);
+                if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+                return invoiceDate >= start && invoiceDate <= end;
+              });
+            })
+          : queriedRows;
+
       console.log("[Reports] invoices query result", {
         selectedProjectId,
-        invoiceCount: data?.length ?? 0,
+        invoiceCount: rows.length,
         error,
       });
-      setInvoices((data as InvoiceRow[] | null) ?? []);
+      setInvoices(rows);
       setLoadingPreview(false);
     };
 
     void loadInvoices();
-  }, [selectedCategoryIds, selectedPeriodIds, selectedProjectId, selectedStatus, supabase]);
+  }, [periods, selectedCategoryIds, selectedPeriodIds, selectedProject, selectedProjectId, selectedStatus, supabase]);
 
   const filterConfigs: FilterConfig[] = [
     {
@@ -367,25 +490,27 @@ export default function ReportsPage() {
         />
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <article className="rounded-xl border border-snap-border bg-snap-surface p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Period Selector</h2>
-            <p className="mt-1 text-sm text-snap-textDim">Select one or more project periods.</p>
-            <select
-              multiple
-              disabled={!selectedProjectId}
-              value={selectedPeriodIds}
-              onChange={(event) =>
-                setSelectedPeriodIds(Array.from(event.currentTarget.selectedOptions, (option) => option.value))
-              }
-              className="mt-3 min-h-[160px] w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none disabled:opacity-60"
-            >
-              {periods.map((period) => (
-                <option key={period.id} value={period.id}>
-                  {period.name}
-                </option>
-              ))}
-            </select>
-          </article>
+          {!selectedProjectId || periods.length > 0 ? (
+            <article className="rounded-xl border border-snap-border bg-snap-surface p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Period Selector</h2>
+              <p className="mt-1 text-sm text-snap-textDim">Select one or more project periods.</p>
+              <select
+                multiple
+                disabled={!selectedProjectId}
+                value={selectedPeriodIds}
+                onChange={(event) =>
+                  setSelectedPeriodIds(Array.from(event.currentTarget.selectedOptions, (option) => option.value))
+                }
+                className="mt-3 min-h-[160px] w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none disabled:opacity-60"
+              >
+                {periods.map((period) => (
+                  <option key={period.id} value={period.id}>
+                    {period.name}
+                  </option>
+                ))}
+              </select>
+            </article>
+          ) : null}
 
           <article className="rounded-xl border border-snap-border bg-snap-surface p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Category Filter</h2>

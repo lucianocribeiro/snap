@@ -240,9 +240,49 @@ export default function ReportsPage() {
           ),
         );
       } else if (projectPeriodType === "monthly") {
-        setPeriods(selectedProject?.created_at ? generateMonthlyPeriods(selectedProject.created_at) : []);
+        let startDateValue = selectedProject?.created_at ?? null;
+        const { data: earliest } = await supabase
+          .from("invoices")
+          .select("invoice_date")
+          .eq("project_id", selectedProjectId)
+          .not("invoice_date", "is", null)
+          .order("invoice_date", { ascending: true })
+          .limit(1)
+          .single();
+
+        const earliestInvoiceDate = (earliest as { invoice_date: string } | null)?.invoice_date ?? null;
+        if (earliestInvoiceDate && selectedProject?.created_at) {
+          const startDate = new Date(
+            Math.min(new Date(earliestInvoiceDate).getTime(), new Date(selectedProject.created_at).getTime()),
+          );
+          startDateValue = toIsoDate(startDate);
+        } else if (earliestInvoiceDate) {
+          startDateValue = earliestInvoiceDate;
+        }
+
+        setPeriods(startDateValue ? generateMonthlyPeriods(startDateValue) : []);
       } else if (projectPeriodType === "weekly") {
-        setPeriods(selectedProject?.created_at ? generateWeeklyPeriods(selectedProject.created_at) : []);
+        let startDateValue = selectedProject?.created_at ?? null;
+        const { data: earliest } = await supabase
+          .from("invoices")
+          .select("invoice_date")
+          .eq("project_id", selectedProjectId)
+          .not("invoice_date", "is", null)
+          .order("invoice_date", { ascending: true })
+          .limit(1)
+          .single();
+
+        const earliestInvoiceDate = (earliest as { invoice_date: string } | null)?.invoice_date ?? null;
+        if (earliestInvoiceDate && selectedProject?.created_at) {
+          const startDate = new Date(
+            Math.min(new Date(earliestInvoiceDate).getTime(), new Date(selectedProject.created_at).getTime()),
+          );
+          startDateValue = toIsoDate(startDate);
+        } else if (earliestInvoiceDate) {
+          startDateValue = earliestInvoiceDate;
+        }
+
+        setPeriods(startDateValue ? generateWeeklyPeriods(startDateValue) : []);
       } else {
         setPeriods([]);
       }

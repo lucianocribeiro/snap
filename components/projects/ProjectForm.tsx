@@ -3,7 +3,9 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/shared/StepIndicator";
+import { CategoryRequestModal } from "@/components/shared/CategoryRequestModal";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/context/AuthContext";
 import type { ProjectColumn, ProjectFormState } from "@/components/dashboard/types";
 import {
   DEFAULT_SELECTED_COLUMNS,
@@ -12,12 +14,19 @@ import {
   PROJECT_STEPS,
 } from "@/components/projects/constants";
 
+const CATEGORY_LIMIT = 20;
+
 type ProjectFormProps = {
   mode: "create" | "edit";
   projectId?: string;
   initialState?: ProjectFormState;
   initialPeriodType?: ProjectFormState["periodType"];
   initialInvoicesCount?: number;
+};
+
+type PendingCategoryRequest = {
+  categoryName: string;
+  note: string;
 };
 
 const EMPTY_STATE: ProjectFormState = {
@@ -51,11 +60,15 @@ export function ProjectForm({
 }: ProjectFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { organizationId } = useAuth();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestCategoryName, setRequestCategoryName] = useState("");
+  const [pendingCategoryRequests, setPendingCategoryRequests] = useState<PendingCategoryRequest[]>([]);
   const [formState, setFormState] = useState<ProjectFormState>(initialState ?? EMPTY_STATE);
 
   const canContinueFromStep1 = formState.name.trim().length > 0;
@@ -66,6 +79,18 @@ export function ProjectForm({
     initialInvoicesCount > 0 &&
     initialPeriodType &&
     initialPeriodType !== formState.periodType;
+
+  const resolveOrganizationId = async (userId: string) => {
+    if (organizationId) return organizationId;
+
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("organization_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    return data?.organization_id ?? null;
+  };
 
   const sortedColumns = (Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).sort((a, b) => {
     const labelA = PROJECT_COLUMN_LABELS[a];
@@ -95,11 +120,70 @@ export function ProjectForm({
     });
   };
 
+  const openRequestModal = (name: string) => {
+    setRequestCategoryName(name);
+    setRequestModalOpen(true);
+  };
+
   const addCategory = () => {
     const normalized = normalizeCategory(categoryInput);
-    if (!normalized || formState.categories.includes(normalized) || formState.categories.length >= 10) return;
+    if (!normalized || formState.categories.includes(normalized)) return;
+    if (formState.categories.length >= CATEGORY_LIMIT) {
+      openRequestModal(normalized);
+      return;
+    }
 
     setFormState((prev) => ({ ...prev, categories: [...prev.categories, normalized] }));
+    setCategoryInput("");
+  };
+
+  const submitCategoryRequest = async ({
+    categoryName,
+    note,
+  }: {
+    categoryName: string;
+    note: string;
+  }) => {
+    if (formState.categories.includes(categoryName)) {
+      throw new Error("This category already exists in the project.");
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("Session expired. Please sign in again.");
+    }
+
+    const resolvedOrganizationId = await resolveOrganizationId(user.id);
+    if (!resolvedOrganizationId) {
+      throw new Error("Could not resolve organization for this request.");
+    }
+
+    if (mode === "create" && !projectId) {
+      setPendingCategoryRequests((previous) => [...previous, { categoryName, note }]);
+      setToast("Category request will be sent after the project is created.");
+      setRequestModalOpen(false);
+      setCategoryInput("");
+      return;
+    }
+
+    const { error } = await supabase.from("category_requests").insert({
+      project_id: projectId,
+      organization_id: resolvedOrganizationId,
+      requested_by: user.id,
+      category_name: categoryName,
+      note: note || null,
+      status: "pending",
+    });
+
+    if (error) {
+      throw new Error("Failed to send request.");
+    }
+
+    setToast("Category request sent.");
+    setRequestModalOpen(false);
     setCategoryInput("");
   };
 
@@ -158,6 +242,8 @@ export function ProjectForm({
       return;
     }
 
+    const resolvedOrganizationId = await resolveOrganizationId(user.id);
+
     const projectPayload = {
       name: formState.name.trim(),
       description: formState.description.trim() || null,
@@ -215,6 +301,7 @@ export function ProjectForm({
     await supabase.from("categories").delete().eq("project_id", targetProjectId);
     const categoryRows = formState.categories.map((name) => ({
       project_id: targetProjectId,
+      ...(resolvedOrganizationId ? { organization_id: resolvedOrganizationId } : {}),
       name,
       created_by: user.id,
     }));
@@ -222,6 +309,24 @@ export function ProjectForm({
       const { error } = await supabase.from("categories").insert(categoryRows);
       if (error) {
         setToast("Project saved, but categories could not be updated.");
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    if (pendingCategoryRequests.length > 0 && resolvedOrganizationId) {
+      const requestRows = pendingCategoryRequests.map((request) => ({
+        project_id: targetProjectId,
+        organization_id: resolvedOrganizationId,
+        requested_by: user.id,
+        category_name: request.categoryName,
+        note: request.note || null,
+        status: "pending" as const,
+      }));
+
+      const { error } = await supabase.from("category_requests").insert(requestRows);
+      if (error) {
+        setToast("Project saved, but category requests could not be sent.");
         setIsSaving(false);
         return;
       }
@@ -407,26 +512,25 @@ export function ProjectForm({
         {step === 4 ? (
           <div className="space-y-5">
             <h2 className="text-lg font-semibold text-snap-textMain">Categories</h2>
-            <p className="text-sm text-snap-textDim">{formState.categories.length} / 10</p>
+            <p className="text-sm text-snap-textDim">{formState.categories.length} / {CATEGORY_LIMIT}</p>
             <div className="flex gap-2">
               <input
                 value={categoryInput}
                 onChange={(event) => setCategoryInput(event.target.value)}
-                disabled={formState.categories.length >= 10}
                 placeholder="Add a category"
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none disabled:opacity-50"
+                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
               />
               <button
                 type="button"
                 onClick={addCategory}
-                disabled={formState.categories.length >= 10}
+                disabled={normalizeCategory(categoryInput).length === 0}
                 className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
               >
                 Add
               </button>
             </div>
-            {formState.categories.length >= 10 ? (
-              <p className="text-sm text-snap-textDim">Maximum of 10 categories reached.</p>
+            {formState.categories.length >= CATEGORY_LIMIT ? (
+              <p className="text-sm text-snap-textDim">You have reached the 20-category limit for this project.</p>
             ) : null}
             <div className="flex flex-wrap gap-2">
               {formState.categories.map((category) => (
@@ -506,6 +610,13 @@ export function ProjectForm({
           </button>
         </div>
       </form>
+
+      <CategoryRequestModal
+        open={requestModalOpen}
+        categoryName={requestCategoryName}
+        onClose={() => setRequestModalOpen(false)}
+        onSubmit={submitCategoryRequest}
+      />
     </section>
   );
 }

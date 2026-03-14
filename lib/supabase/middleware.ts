@@ -19,7 +19,7 @@ export function getRequiredRoles(pathname: string): UserRole[] | null {
   if (pathname.startsWith("/super-admin")) return ["super_admin"];
   if (pathname === "/users" || pathname.startsWith("/users/")) return ["org_admin"];
   if (pathname === "/categories" || pathname.startsWith("/categories/")) {
-    return ["super_admin", "org_admin"];
+    return ["org_admin"];
   }
 
   return null;

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ProjectColumn } from "@/components/dashboard/types";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { PROJECT_COLUMN_LABELS } from "@/components/projects/constants";
+import { CategoryRequestModal } from "@/components/shared/CategoryRequestModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StepIndicator } from "@/components/shared/StepIndicator";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -54,6 +55,7 @@ type ColumnMapping = {
 };
 
 const STEPS = ["Select Project", "Upload", "Review Extraction", "Map Columns", "Confirm"];
+const CATEGORY_LIMIT = 20;
 const CURRENCY_OPTIONS: Array<{ value: CurrencyCode; label: string }> = [
   { value: "USD", label: "USD - US Dollar" },
   { value: "ARS", label: "ARS - Argentine Peso" },
@@ -106,6 +108,10 @@ function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+function normalizeCategory(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 function isProjectColumn(value: string): value is ProjectColumn {
   return Object.prototype.hasOwnProperty.call(PROJECT_COLUMN_LABELS, value);
 }
@@ -130,7 +136,7 @@ function normalizeCurrency(value: string | undefined): CurrencyCode {
 export default function NewInvoicePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { organizationId } = useAuth();
+  const { user, organizationId } = useAuth();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -146,6 +152,10 @@ export default function NewInvoicePage() {
     custom3: "Custom 3",
   });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoryInput, setCategoryInput] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestCategoryName, setRequestCategoryName] = useState("");
   const [formState, setFormState] = useState<InvoiceFormState>(INITIAL_FORM);
   const [file, setFile] = useState<File | null>(null);
   const [storagePath, setStoragePath] = useState<string | null>(null);
@@ -258,6 +268,100 @@ export default function NewInvoicePage() {
       .maybeSingle();
 
     return data?.organization_id ?? null;
+  };
+
+  const openRequestModal = (name: string) => {
+    setRequestCategoryName(name);
+    setRequestModalOpen(true);
+  };
+
+  const addCategoryToProject = async () => {
+    const normalizedName = normalizeCategory(categoryInput);
+    if (!selectedProjectId || !normalizedName) return;
+
+    const alreadyExists = categories.some((category) => normalizeCategory(category.name) === normalizedName);
+    if (alreadyExists) {
+      setToast("Category already exists for this project.");
+      return;
+    }
+
+    if (categories.length >= CATEGORY_LIMIT) {
+      openRequestModal(normalizedName);
+      return;
+    }
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    if (!authUser) {
+      setToast("Session expired. Please sign in again.");
+      return;
+    }
+
+    const resolvedOrganizationId = await resolveOrganizationId();
+
+    setIsAddingCategory(true);
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        project_id: selectedProjectId,
+        ...(resolvedOrganizationId ? { organization_id: resolvedOrganizationId } : {}),
+        name: normalizedName,
+        created_by: authUser.id,
+      })
+      .select("id, name")
+      .single();
+
+    if (error || !data) {
+      setToast("Failed to add category.");
+      setIsAddingCategory(false);
+      return;
+    }
+
+    setCategories((previous) => [...previous, data as CategoryOption].sort((a, b) => a.name.localeCompare(b.name)));
+    setFormState((previous) => ({ ...previous, categoryId: data.id }));
+    setCategoryInput("");
+    setIsAddingCategory(false);
+  };
+
+  const submitCategoryRequest = async ({
+    categoryName,
+    note,
+  }: {
+    categoryName: string;
+    note: string;
+  }) => {
+    if (!selectedProjectId) {
+      throw new Error("Select a project before requesting a category.");
+    }
+
+    const authUserId = user?.id;
+    if (!authUserId) {
+      throw new Error("Session expired. Please sign in again.");
+    }
+
+    const resolvedOrganizationId = await resolveOrganizationId();
+    if (!resolvedOrganizationId) {
+      throw new Error("Could not resolve organization for this request.");
+    }
+
+    const { error } = await supabase.from("category_requests").insert({
+      project_id: selectedProjectId,
+      organization_id: resolvedOrganizationId,
+      requested_by: authUserId,
+      category_name: categoryName,
+      note: note || null,
+      status: "pending",
+    });
+
+    if (error) {
+      throw new Error("Failed to send request.");
+    }
+
+    setRequestModalOpen(false);
+    setCategoryInput("");
+    setToast("Category request sent.");
   };
 
   const runOCRForFile = async (nextFile: File) => {
@@ -616,8 +720,9 @@ export default function NewInvoicePage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Add Invoice">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <>
+      <DashboardLayout pageTitle="Add Invoice">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <PageHeader title="Add Invoice" description="Manual entry flow for Phase 5." />
 
         {toast ? (
@@ -835,6 +940,34 @@ export default function NewInvoicePage() {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-snap-textDim">
+                    {categories.length} / {CATEGORY_LIMIT} categories
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      value={categoryInput}
+                      onChange={(event) => setCategoryInput(event.target.value)}
+                      placeholder="Add a category"
+                      className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void addCategoryToProject()}
+                      disabled={
+                        !selectedProjectId ||
+                        normalizeCategory(categoryInput).length === 0 ||
+                        isAddingCategory
+                      }
+                      className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
+                    >
+                      {isAddingCategory ? "Adding..." : "Add"}
+                    </button>
+                  </div>
+                  {categories.length >= CATEGORY_LIMIT ? (
+                    <p className="text-xs text-snap-textDim">
+                      You have reached the 20-category limit for this project.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -893,7 +1026,15 @@ export default function NewInvoicePage() {
             )}
           </div>
         </section>
-      </div>
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+
+      <CategoryRequestModal
+        open={requestModalOpen}
+        categoryName={requestCategoryName}
+        onClose={() => setRequestModalOpen(false)}
+        onSubmit={submitCategoryRequest}
+      />
+    </>
   );
 }

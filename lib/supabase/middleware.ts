@@ -10,6 +10,7 @@ type SessionContext = {
 };
 
 const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
+const ORG_LEVEL_SHARED_ROUTES = ["/dashboard", "/projects", "/invoices", "/reports", "/settings"];
 
 export function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -17,6 +18,15 @@ export function isPublicRoute(pathname: string) {
 
 export function getRequiredRoles(pathname: string): UserRole[] | null {
   if (pathname.startsWith("/super-admin")) return ["super_admin"];
+
+  if (
+    ORG_LEVEL_SHARED_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`),
+    )
+  ) {
+    return ["org_admin", "user"];
+  }
+
   if (pathname === "/users" || pathname.startsWith("/users/")) return ["org_admin"];
   if (pathname === "/categories" || pathname.startsWith("/categories/")) {
     return ["org_admin"];

@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ACTIVE_CONTEXT_COOKIE } from "@/lib/auth/constants";
 import {
   getDashboardPathForRole,
   getRequiredRoles,
+  isOrgRoute,
   isPublicRoute,
   updateSession,
 } from "@/lib/supabase/middleware";
@@ -28,8 +30,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const requiredRoles = getRequiredRoles(pathname);
+  const activeContext = request.cookies.get(ACTIVE_CONTEXT_COOKIE)?.value;
+  const superAdminInOrgContext =
+    session.role === "super_admin" &&
+    Boolean(session.organizationId) &&
+    activeContext === "org_admin";
 
-  if (requiredRoles && (!session.role || !requiredRoles.includes(session.role))) {
+  if (
+    requiredRoles &&
+    (!session.role ||
+      (!requiredRoles.includes(session.role) &&
+        !(superAdminInOrgContext && isOrgRoute(pathname))))
+  ) {
     const fallbackUrl = new URL(getDashboardPathForRole(session.role), request.url);
     return copySupabaseCookies(session.response, NextResponse.redirect(fallbackUrl));
   }

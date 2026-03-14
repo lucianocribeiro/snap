@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 
@@ -61,6 +61,49 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
   );
 }
 
+function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
+  const { activeContext, hasDualAccess, organizationName, switchContext } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (!hasDualAccess) return null;
+
+  const currentLabel =
+    activeContext === "super_admin" ? "Super Admin" : `${organizationName ?? "Organization"} (Admin)`;
+  const nextContext = activeContext === "super_admin" ? "org_admin" : "super_admin";
+  const nextLabel =
+    nextContext === "super_admin"
+      ? "Switch to: Super Admin"
+      : `Switch to: ${organizationName ?? "Organization"} (Admin)`;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((previous) => !previous)}
+        className="flex w-full items-center justify-between rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain hover:bg-snap-bgDeep"
+      >
+        <span>{currentLabel}</span>
+        <ChevronDown className="h-4 w-4 text-snap-textDim" />
+      </button>
+      {open ? (
+        <div className="mt-2 rounded-md border border-snap-border bg-snap-bg p-2">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              switchContext(nextContext);
+              onSwitch?.();
+            }}
+            className="w-full rounded-md px-2 py-2 text-left text-sm text-snap-textDim hover:bg-snap-bgDeep hover:text-snap-textMain"
+          >
+            {nextLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,6 +128,7 @@ export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutS
             <Image src="/logo.png" alt="Snap logo" width={168} height={45} className="h-[2.8rem] w-auto" priority />
           </div>
           <div className="px-3 py-4">
+            <ContextSwitcher />
             <SidebarNav pathname={pathname} />
           </div>
         </aside>
@@ -116,6 +160,7 @@ export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutS
 
           {menuOpen ? (
             <div className="border-t border-snap-border bg-snap-bgSecondary px-3 py-3 md:hidden">
+              <ContextSwitcher onSwitch={() => setMenuOpen(false)} />
               <SidebarNav pathname={pathname} onNavigate={() => setMenuOpen(false)} />
             </div>
           ) : null}

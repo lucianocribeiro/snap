@@ -7,10 +7,12 @@ type SessionContext = {
   response: NextResponse;
   isAuthenticated: boolean;
   role: UserRole | null;
+  organizationId: string | null;
 };
 
 const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 const ORG_LEVEL_SHARED_ROUTES = ["/dashboard", "/projects", "/invoices", "/reports", "/settings"];
+const ORG_ADMIN_ONLY_ROUTES = ["/categories", "/users"];
 
 export function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -33,6 +35,12 @@ export function getRequiredRoles(pathname: string): UserRole[] | null {
   }
 
   return null;
+}
+
+export function isOrgRoute(pathname: string) {
+  return [...ORG_LEVEL_SHARED_ROUTES, ...ORG_ADMIN_ONLY_ROUTES].some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 }
 
 export function getDashboardPathForRole(role: UserRole | null) {
@@ -68,16 +76,17 @@ export async function updateSession(request: NextRequest): Promise<SessionContex
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { response, isAuthenticated: false, role: null };
+    return { response, isAuthenticated: false, role: null, organizationId: null };
   }
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("role")
+    .select("role, organization_id")
     .eq("id", user.id)
     .maybeSingle();
 
   const role = (profile?.role as UserRole | undefined) ?? null;
+  const organizationId = profile?.organization_id ?? null;
 
-  return { response, isAuthenticated: true, role };
+  return { response, isAuthenticated: true, role, organizationId };
 }

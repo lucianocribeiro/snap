@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 
@@ -88,14 +88,65 @@ function SidebarNav({
   );
 }
 
+function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
+  const { activeContext, hasDualAccess, organizationName, switchContext } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (!hasDualAccess) return null;
+
+  const currentLabel =
+    activeContext === "super_admin" ? "Super Admin" : `${organizationName ?? "Organization"} (Admin)`;
+  const nextContext = activeContext === "super_admin" ? "org_admin" : "super_admin";
+  const nextLabel =
+    nextContext === "super_admin"
+      ? "Switch to: Super Admin"
+      : `Switch to: ${organizationName ?? "Organization"} (Admin)`;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((previous) => !previous)}
+        className="flex w-full items-center justify-between rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain hover:bg-snap-bgDeep"
+      >
+        <span>{currentLabel}</span>
+        <ChevronDown className="h-4 w-4 text-snap-textDim" />
+      </button>
+      {open ? (
+        <div className="mt-2 rounded-md border border-snap-border bg-snap-bg p-2">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              switchContext(nextContext);
+              onSwitch?.();
+            }}
+            className="w-full rounded-md px-2 py-2 text-left text-sm text-snap-textDim hover:bg-snap-bgDeep hover:text-snap-textMain"
+          >
+            {nextLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole, activeContext, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const visibleItems = useMemo(() => (userRole ? roleNavItems[userRole] : []), [userRole]);
+  const effectiveRole = useMemo(() => {
+    if (!userRole) return null;
+    if (userRole === "super_admin" && activeContext === "org_admin") {
+      return "org_admin" as const;
+    }
+    return userRole;
+  }, [activeContext, userRole]);
+
+  const visibleItems = useMemo(() => (effectiveRole ? roleNavItems[effectiveRole] : []), [effectiveRole]);
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem("snap.sidebarCollapsed");
@@ -123,6 +174,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
             />
           </div>
           <div className="px-3 py-4">
+            <ContextSwitcher />
             <SidebarNav items={visibleItems} pathname={pathname} />
           </div>
         </aside>
@@ -194,6 +246,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
 
           {menuOpen ? (
             <div className="border-t border-snap-border bg-snap-bgSecondary px-3 py-3 md:hidden">
+              <ContextSwitcher onSwitch={() => setMenuOpen(false)} />
               <SidebarNav
                 items={visibleItems}
                 pathname={pathname}

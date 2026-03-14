@@ -1,10 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+
+type OrganizationOption = {
+  id: string;
+  name: string;
+};
 
 export function SuperAdminSettingsClient() {
   const supabase = useMemo(() => createClient(), []);
+  const { userRole, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -12,8 +19,11 @@ export function SuperAdminSettingsClient() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [language, setLanguage] = useState<"en" | "es">("en");
+  const [linkedOrganizationId, setLinkedOrganizationId] = useState("");
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
 
   const [profileSubmitting, setProfileSubmitting] = useState(false);
+  const [organizationSubmitting, setOrganizationSubmitting] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +47,7 @@ export function SuperAdminSettingsClient() {
 
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("first_name, last_name, email, language")
+        .select("first_name, last_name, email, language, organization_id")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -45,6 +55,20 @@ export function SuperAdminSettingsClient() {
       setLastName(profile?.last_name ?? "");
       setEmail(profile?.email ?? user.email ?? "");
       setLanguage(profile?.language === "es" ? "es" : "en");
+      setLinkedOrganizationId(profile?.organization_id ?? "");
+
+      const { data: organizationRows } = await supabase
+        .from("organizations")
+        .select("id, name")
+        .order("name", { ascending: true });
+
+      setOrganizations(
+        ((organizationRows ?? []) as Array<{ id: string; name: string }>).map((organization) => ({
+          id: organization.id,
+          name: organization.name,
+        })),
+      );
+
       setLoading(false);
     };
 
@@ -95,6 +119,39 @@ export function SuperAdminSettingsClient() {
 
     setProfileSubmitting(false);
     setToast("Profile updated.");
+  };
+
+  const saveOrganizationLink = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setOrganizationSubmitting(true);
+    setError(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("Session expired. Please sign in again.");
+      setOrganizationSubmitting(false);
+      return;
+    }
+
+    const { error: organizationError } = await supabase
+      .from("user_profiles")
+      .update({
+        organization_id: linkedOrganizationId || null,
+      })
+      .eq("id", user.id);
+
+    if (organizationError) {
+      setError("Failed to update organization link.");
+      setOrganizationSubmitting(false);
+      return;
+    }
+
+    await refreshProfile();
+    setOrganizationSubmitting(false);
+    setToast("Organization link updated.");
   };
 
   const changePassword = async (event: FormEvent<HTMLFormElement>) => {
@@ -202,6 +259,40 @@ export function SuperAdminSettingsClient() {
           </select>
         </div>
       </section>
+
+      {userRole === "super_admin" ? (
+        <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
+          <h2 className="text-lg font-semibold text-snap-textMain">My Organization</h2>
+          <p className="mt-2 text-sm text-snap-textDim">
+            Link your Super Admin profile to an organization to enable context switching.
+          </p>
+          <form onSubmit={saveOrganizationLink} className="mt-5 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm text-snap-textDim">Organization</label>
+              <select
+                value={linkedOrganizationId}
+                onChange={(event) => setLinkedOrganizationId(event.target.value)}
+                className="w-full max-w-md rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+              >
+                <option value="">Not linked to any organization</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={organizationSubmitting}
+              className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {organizationSubmitting ? "Saving..." : "Save organization link"}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
         <h2 className="text-lg font-semibold text-snap-textMain">Change password</h2>

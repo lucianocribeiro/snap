@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { ACTIVE_CONTEXT_COOKIE, type ActiveContext } from "@/lib/auth/constants";
 import { createClient } from "@/lib/supabase/client";
 
 type UserRole = "super_admin" | "org_admin" | "user" | null;
@@ -11,10 +12,34 @@ type AuthContextValue = {
   user: User | null;
   userRole: UserRole;
   organizationId: string | null;
+  organizationName: string | null;
+  hasDualAccess: boolean;
+  activeContext: ActiveContext;
+  switchContext: (nextContext: ActiveContext) => void;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function setActiveContextCookie(value: ActiveContext) {
+  document.cookie = `${ACTIVE_CONTEXT_COOKIE}=${value}; path=/; max-age=2592000; samesite=lax`;
+}
+
+function clearActiveContextCookie() {
+  document.cookie = `${ACTIVE_CONTEXT_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
+
+function getActiveContextCookie(): ActiveContext | null {
+  const match = document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${ACTIVE_CONTEXT_COOKIE}=`));
+
+  if (!match) return null;
+  const value = match.split("=")[1];
+  return value === "org_admin" || value === "super_admin" ? value : null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
@@ -22,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [hasDualAccess, setHasDualAccess] = useState(false);
+  const [activeContext, setActiveContext] = useState<ActiveContext>("org_admin");
 
   const loadProfile = useCallback(
     async (userId: string) => {
@@ -31,11 +59,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", userId)
         .maybeSingle();
 
-      setUserRole((data?.role as UserRole) ?? null);
-      setOrganizationId(data?.organization_id ?? null);
+      const nextRole = (data?.role as UserRole) ?? null;
+      const nextOrganizationId = data?.organization_id ?? null;
+
+      setUserRole(nextRole);
+      setOrganizationId(nextOrganizationId);
+
+      if (nextOrganizationId) {
+        const { data: organization } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", nextOrganizationId)
+          .maybeSingle();
+        setOrganizationName((organization?.name as string | undefined) ?? null);
+      } else {
+        setOrganizationName(null);
+      }
+
+      const dualAccess = nextRole === "super_admin" && Boolean(nextOrganizationId);
+      setHasDualAccess(dualAccess);
+
+      let nextContext: ActiveContext;
+      if (dualAccess) {
+        const cookieContext = getActiveContextCookie();
+        nextContext = cookieContext === "org_admin" ? "org_admin" : "super_admin";
+        setActiveContextCookie(nextContext);
+      } else {
+        nextContext = nextRole === "super_admin" ? "super_admin" : "org_admin";
+        clearActiveContextCookie();
+      }
+
+      setActiveContext(nextContext);
     },
     [supabase],
   );
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    await loadProfile(user.id);
+  }, [loadProfile, user]);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -59,6 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!sessionUser) {
         setUserRole(null);
         setOrganizationId(null);
+        setOrganizationName(null);
+        setHasDualAccess(false);
+        setActiveContext("org_admin");
+        clearActiveContextCookie();
         return;
       }
 
@@ -68,11 +134,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [loadProfile, supabase]);
 
+  const switchContext = useCallback(
+    (nextContext: ActiveContext) => {
+      if (!hasDualAccess) return;
+      setActiveContext(nextContext);
+      setActiveContextCookie(nextContext);
+      router.push(nextContext === "org_admin" ? "/dashboard" : "/super-admin/dashboard");
+    },
+    [hasDualAccess, router],
+  );
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     setUserRole(null);
     setOrganizationId(null);
+    setOrganizationName(null);
+    setHasDualAccess(false);
+    setActiveContext("org_admin");
+    clearActiveContextCookie();
     router.push("/login");
   }, [router, supabase]);
 
@@ -81,9 +161,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       userRole,
       organizationId,
+      organizationName,
+      hasDualAccess,
+      activeContext,
+      switchContext,
+      refreshProfile,
       signOut,
     }),
-    [organizationId, signOut, user, userRole],
+    [activeContext, hasDualAccess, organizationId, organizationName, refreshProfile, signOut, switchContext, user, userRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

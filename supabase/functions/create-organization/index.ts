@@ -79,6 +79,19 @@ Deno.serve(async (request) => {
       return respond("Forbidden", 403);
     }
 
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (usersError) {
+      return respond(usersError.message, 500);
+    }
+
+    const existingAuthUser = usersData.users.find(
+      (user) => user.email?.toLowerCase() === adminEmail,
+    );
+
     const { data: organization, error: organizationError } = await supabase
       .from("organizations")
       .insert({
@@ -94,23 +107,29 @@ Deno.serve(async (request) => {
 
     const organizationId = organization.id;
 
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(adminEmail, {
-      data: {
-        first_name: adminFirstName,
-        last_name: adminLastName,
-        role: "org_admin",
-        organization_id: organizationId,
-      },
-    });
+    let adminUserId = existingAuthUser?.id;
 
-    if (inviteError || !inviteData.user) {
-      await supabase.from("organizations").delete().eq("id", organizationId);
-      return respond(inviteError?.message ?? "Failed to invite organization admin.", 400);
+    if (!adminUserId) {
+      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(adminEmail, {
+        data: {
+          first_name: adminFirstName,
+          last_name: adminLastName,
+          role: "org_admin",
+          organization_id: organizationId,
+        },
+      });
+
+      if (inviteError || !inviteData.user) {
+        await supabase.from("organizations").delete().eq("id", organizationId);
+        return respond(inviteError?.message ?? "Failed to invite organization admin.", 400);
+      }
+
+      adminUserId = inviteData.user.id;
     }
 
     const { error: profileUpsertError } = await supabase.from("user_profiles").upsert(
       {
-        id: inviteData.user.id,
+        id: adminUserId,
         first_name: adminFirstName,
         last_name: adminLastName,
         email: adminEmail,

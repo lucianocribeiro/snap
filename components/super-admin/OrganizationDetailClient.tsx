@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useAuth } from "@/lib/context/AuthContext";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
 
 type OrganizationDetailClientProps = {
@@ -24,9 +25,12 @@ function formatDate(value: string) {
 
 export function OrganizationDetailClient({ organization }: OrganizationDetailClientProps) {
   const router = useRouter();
+  const { organizationId } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -63,6 +67,26 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
     setConfirmOpen(false);
     setToast(nextStatus === "active" ? "Organization activated." : "Organization deactivated.");
     router.refresh();
+  };
+
+  const deleteOrganization = async () => {
+    setDeleteSubmitting(true);
+
+    const response = await fetch(`/super-admin/api/organizations/${organization.id}/delete`, {
+      method: "DELETE",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+    if (!response.ok) {
+      setToast(result.error ?? "Failed to delete organization.");
+      setDeleteSubmitting(false);
+      return;
+    }
+
+    setDeleteSubmitting(false);
+    setDeleteConfirmOpen(false);
+    router.push("/super-admin/organizations?deleted=1");
   };
 
   return (
@@ -119,6 +143,14 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
           >
             {organization.status === "active" ? "Deactivate" : "Activate"}
           </button>
+          <button
+            type="button"
+            disabled={organization.status !== "inactive" || organizationId === organization.id}
+            onClick={() => setDeleteConfirmOpen(true)}
+            className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -134,6 +166,16 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
         destructive={organization.status === "active"}
         onCancel={() => (submitting ? null : setConfirmOpen(false))}
         onConfirm={() => void toggleStatus()}
+      />
+
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="Delete Organization"
+        description={`This will permanently delete [${organization.name}] and all associated data including users, projects, invoices, and categories. This cannot be undone.`}
+        confirmLabel={deleteSubmitting ? "Deleting..." : "Delete"}
+        destructive
+        onCancel={() => (deleteSubmitting ? null : setDeleteConfirmOpen(false))}
+        onConfirm={() => void deleteOrganization()}
       />
     </div>
   );

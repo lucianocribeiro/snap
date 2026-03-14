@@ -106,7 +106,7 @@ function isValidEmail(email: string) {
 
 export default function UsersPage() {
   const supabase = useMemo(() => createClient(), []);
-  const { organizationId, userRole } = useAuth();
+  const { organizationId, userRole, user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [statusSource, setStatusSource] = useState<StatusSource>("is_active");
@@ -125,6 +125,8 @@ export default function UsersPage() {
 
   const [statusChangeUser, setStatusChangeUser] = useState<UserRow | null>(null);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [removeUser, setRemoveUser] = useState<UserRow | null>(null);
+  const [removeSubmitting, setRemoveSubmitting] = useState(false);
 
   const isOrgAdmin = userRole === "org_admin";
 
@@ -339,6 +341,28 @@ export default function UsersPage() {
     setToast(nextStatus === "active" ? "User activated." : "User deactivated.");
   };
 
+  const confirmRemoveUser = async () => {
+    if (!removeUser) return;
+    setRemoveSubmitting(true);
+
+    const response = await fetch(`/api/users/${removeUser.id}/remove`, {
+      method: "DELETE",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+    if (!response.ok) {
+      setToast(result.error ?? "Failed to remove user.");
+      setRemoveSubmitting(false);
+      return;
+    }
+
+    setRemoveSubmitting(false);
+    setRemoveUser(null);
+    setToast("User removed.");
+    await loadUsers();
+  };
+
   return (
     <DashboardLayout pageTitle="Users">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -394,6 +418,7 @@ export default function UsersPage() {
                   {users.map((user) => {
                     const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "-";
                     const toggleLabel = user.status === "active" ? "Deactivate" : "Activate";
+                    const canRemove = user.status === "inactive" && user.id !== currentUser?.id;
 
                     return (
                       <tr key={user.id} className="border-b border-snap-border/70 text-sm text-snap-textMain last:border-b-0">
@@ -425,6 +450,15 @@ export default function UsersPage() {
                                 }
                               >
                                 {toggleLabel}
+                              </button>
+                              <span className="text-snap-textDim">·</span>
+                              <button
+                                type="button"
+                                disabled={!canRemove}
+                                onClick={() => setRemoveUser(user)}
+                                className="text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Remove
                               </button>
                             </div>
                           ) : (
@@ -638,6 +672,24 @@ export default function UsersPage() {
         onConfirm={() => {
           if (statusSubmitting) return;
           void confirmStatusChange();
+        }}
+      />
+
+      <ConfirmModal
+        open={Boolean(removeUser)}
+        title="Remove User"
+        description={`This will permanently remove [${
+          removeUser ? [removeUser.firstName, removeUser.lastName].filter(Boolean).join(" ") || removeUser.email : "User Name"
+        }] from the platform. Their uploaded invoices will remain. This cannot be undone.`}
+        confirmLabel={removeSubmitting ? "Removing..." : "Remove"}
+        destructive
+        onCancel={() => {
+          if (removeSubmitting) return;
+          setRemoveUser(null);
+        }}
+        onConfirm={() => {
+          if (removeSubmitting) return;
+          void confirmRemoveUser();
         }}
       />
     </DashboardLayout>

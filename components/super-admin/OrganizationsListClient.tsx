@@ -7,6 +7,7 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useAuth } from "@/lib/context/AuthContext";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
 
 type OrganizationsListClientProps = {
@@ -26,11 +27,14 @@ function formatDate(value: string) {
 
 export function OrganizationsListClient({ organizations }: OrganizationsListClientProps) {
   const router = useRouter();
+  const { organizationId } = useAuth();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<OrganizationListItem | null>(null);
+  const [deleteSelected, setDeleteSelected] = useState<OrganizationListItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -42,6 +46,8 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
     const params = new URLSearchParams(window.location.search);
     if (params.get("created") === "1") {
       setToast("Organization created successfully.");
+    } else if (params.get("deleted") === "1") {
+      setToast("Organization deleted successfully.");
     }
   }, []);
 
@@ -80,6 +86,28 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
     setSubmitting(false);
     setSelected(null);
     setToast(nextStatus === "active" ? "Organization activated." : "Organization deactivated.");
+    router.refresh();
+  };
+
+  const deleteOrganization = async () => {
+    if (!deleteSelected) return;
+    setDeleteSubmitting(true);
+
+    const response = await fetch(`/super-admin/api/organizations/${deleteSelected.id}/delete`, {
+      method: "DELETE",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+    if (!response.ok) {
+      setToast(result.error ?? "Failed to delete organization.");
+      setDeleteSubmitting(false);
+      return;
+    }
+
+    setDeleteSubmitting(false);
+    setDeleteSelected(null);
+    router.push("/super-admin/organizations?deleted=1");
     router.refresh();
   };
 
@@ -177,6 +205,14 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
                       >
                         {organization.status === "active" ? "Deactivate" : "Activate"}
                       </button>
+                      <button
+                        type="button"
+                        disabled={organization.status !== "inactive" || (organizationId === organization.id)}
+                        onClick={() => setDeleteSelected(organization)}
+                        className="text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -204,6 +240,16 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
         destructive={selected?.status === "active"}
         onCancel={() => (submitting ? null : setSelected(null))}
         onConfirm={() => void toggleStatus()}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteSelected)}
+        title="Delete Organization"
+        description={`This will permanently delete [${deleteSelected?.name ?? "Org Name"}] and all associated data including users, projects, invoices, and categories. This cannot be undone.`}
+        confirmLabel={deleteSubmitting ? "Deleting..." : "Delete"}
+        destructive
+        onCancel={() => (deleteSubmitting ? null : setDeleteSelected(null))}
+        onConfirm={() => void deleteOrganization()}
       />
     </div>
   );

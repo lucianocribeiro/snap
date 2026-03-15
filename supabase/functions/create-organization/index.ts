@@ -108,6 +108,7 @@ Deno.serve(async (request) => {
     const organizationId = organization.id;
 
     let adminUserId = existingAuthUser?.id;
+    let roleToSet = "org_admin";
 
     if (!adminUserId) {
       const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(adminEmail, {
@@ -126,6 +127,15 @@ Deno.serve(async (request) => {
 
       adminUserId = inviteData.user.id;
     }
+    if (existingAuthUser) {
+      const { data: existingProfile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", adminUserId)
+        .maybeSingle();
+
+      roleToSet = existingProfile?.role === "super_admin" ? "super_admin" : "org_admin";
+    }
 
     const { error: profileUpsertError } = await supabase.from("user_profiles").upsert(
       {
@@ -133,7 +143,7 @@ Deno.serve(async (request) => {
         first_name: adminFirstName,
         last_name: adminLastName,
         email: adminEmail,
-        role: "org_admin",
+        role: roleToSet,
         organization_id: organizationId,
         status: "active",
       },

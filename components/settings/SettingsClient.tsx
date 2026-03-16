@@ -1,34 +1,52 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 
-type TabKey = "profile" | "preferences";
+type TabKey = "organization" | "profile" | "preferences";
 type LanguageOption = "en" | "es";
 
 function cx(...classes: Array<string | false>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export function SuperAdminSettingsClient() {
+export function SettingsClient() {
   const supabase = useMemo(() => createClient(), []);
+  const { userRole, organizationId } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
 
+  const [organizationName, setOrganizationName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [language, setLanguage] = useState<LanguageOption>("en");
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordMismatch, setPasswordMismatch] = useState<string | null>(null);
 
+  const [organizationSubmitting, setOrganizationSubmitting] = useState(false);
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [preferencesSubmitting, setPreferencesSubmitting] = useState(false);
+
+  const isOrgAdmin = userRole === "org_admin";
+  const visibleTabs = isOrgAdmin
+    ? [
+        { key: "organization" as const, label: "Organization" },
+        { key: "profile" as const, label: "Profile" },
+        { key: "preferences" as const, label: "Preferences" },
+      ]
+    : [
+        { key: "profile" as const, label: "Profile" },
+        { key: "preferences" as const, label: "Preferences" },
+      ];
 
   useEffect(() => {
     if (!toast) return;
@@ -37,7 +55,16 @@ export function SuperAdminSettingsClient() {
   }, [toast]);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    if (!isOrgAdmin && activeTab === "organization") {
+      setActiveTab("profile");
+    }
+  }, [activeTab, isOrgAdmin]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true);
+      setError(null);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -64,11 +91,51 @@ export function SuperAdminSettingsClient() {
       setLastName(profile?.last_name ?? "");
       setEmail(profile?.email ?? user.email ?? "");
       setLanguage(profile?.language === "es" ? "es" : "en");
+
+      if (isOrgAdmin && organizationId) {
+        const { data: organization, error: organizationError } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", organizationId)
+          .maybeSingle();
+
+        if (organizationError) {
+          setError("Failed to load organization settings.");
+        } else {
+          setOrganizationName(organization?.name ?? "");
+        }
+      }
+
       setLoading(false);
     };
 
-    void loadProfile();
-  }, [supabase]);
+    void loadSettings();
+  }, [isOrgAdmin, organizationId, supabase]);
+
+  const saveOrganization = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!organizationId) {
+      setError("Organization not found for your account.");
+      return;
+    }
+
+    setOrganizationSubmitting(true);
+    setError(null);
+
+    const { error: organizationError } = await supabase
+      .from("organizations")
+      .update({ name: organizationName.trim() })
+      .eq("id", organizationId);
+
+    if (organizationError) {
+      setError("Failed to save organization settings.");
+      setOrganizationSubmitting(false);
+      return;
+    }
+
+    setOrganizationSubmitting(false);
+    setToast("Organization updated.");
+  };
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,7 +229,7 @@ export function SuperAdminSettingsClient() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
+      <div className="rounded-xl border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
         Loading settings...
       </div>
     );
@@ -184,10 +251,7 @@ export function SuperAdminSettingsClient() {
 
       <section className="rounded-xl border border-snap-border bg-snap-surface p-2">
         <div className="flex flex-wrap gap-2">
-          {[
-            { key: "profile" as const, label: "Profile" },
-            { key: "preferences" as const, label: "Preferences" },
-          ].map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
@@ -205,102 +269,128 @@ export function SuperAdminSettingsClient() {
         </div>
       </section>
 
-      {activeTab === "profile" ? (
-      <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
-        <h2 className="text-lg font-semibold text-snap-textMain">Profile</h2>
-        <form onSubmit={saveProfile} className="mt-5 space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+      {activeTab === "organization" && isOrgAdmin ? (
+        <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
+          <h2 className="text-lg font-semibold text-snap-textMain">Organization</h2>
+          <form onSubmit={saveOrganization} className="mt-5 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">First name</label>
+              <label className="text-sm text-snap-textDim">Organization name</label>
               <input
-                value={firstName}
-                onChange={(event) => setFirstName(event.target.value)}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                value={organizationName}
+                onChange={(event) => setOrganizationName(event.target.value)}
+                className="w-full max-w-xl rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Last name</label>
-              <input
-                value={lastName}
-                onChange={(event) => setLastName(event.target.value)}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-snap-textDim">Email</label>
-            <input
-              type="email"
-              value={email}
-              readOnly
-              className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textDim outline-none"
-            />
-            <p className="text-xs text-snap-textDim">
-              Email changes require the Supabase authentication flow.
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={profileSubmitting}
-            className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {profileSubmitting ? "Saving..." : "Save profile"}
-          </button>
-        </form>
-
-        <div className="mt-8 border-t border-snap-border pt-6">
-          <h3 className="text-base font-semibold text-snap-textMain">Change password</h3>
-          <form onSubmit={updatePassword} className="mt-4 max-w-lg space-y-3">
-            <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Current password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">New password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
-                minLength={8}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Confirm new password</label>
-              <input
-                type="password"
-                value={confirmNewPassword}
-                onChange={(event) => setConfirmNewPassword(event.target.value)}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
-                minLength={8}
-                required
-              />
-              {passwordMismatch ? <p className="text-xs text-red-300">{passwordMismatch}</p> : null}
             </div>
 
             <button
               type="submit"
-              disabled={passwordSubmitting}
+              disabled={organizationSubmitting}
               className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {passwordSubmitting ? "Updating..." : "Update Password"}
+              {organizationSubmitting ? "Saving..." : "Save"}
             </button>
           </form>
-        </div>
-      </section>
+        </section>
+      ) : null}
+
+      {activeTab === "profile" ? (
+        <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
+          <h2 className="text-lg font-semibold text-snap-textMain">Profile</h2>
+
+          <form onSubmit={saveProfile} className="mt-5 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm text-snap-textDim">First name</label>
+                <input
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-snap-textDim">Last name</label>
+                <input
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-snap-textDim">Email</label>
+              <input
+                type="email"
+                value={email}
+                readOnly
+                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textDim outline-none"
+              />
+              <p className="text-xs text-snap-textDim">
+                Email changes require the Supabase authentication flow.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={profileSubmitting}
+              className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {profileSubmitting ? "Saving..." : "Save profile"}
+            </button>
+          </form>
+
+          <div className="mt-8 border-t border-snap-border pt-6">
+            <h3 className="text-base font-semibold text-snap-textMain">Change password</h3>
+            <form onSubmit={updatePassword} className="mt-4 max-w-lg space-y-3">
+              <div className="space-y-2">
+                <label className="text-sm text-snap-textDim">Current password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-snap-textDim">New password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  minLength={8}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-snap-textDim">Confirm new password</label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  minLength={8}
+                  required
+                />
+                {passwordMismatch ? <p className="text-xs text-red-300">{passwordMismatch}</p> : null}
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordSubmitting}
+                className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {passwordSubmitting ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </div>
+        </section>
       ) : null}
 
       {activeTab === "preferences" ? (
@@ -321,6 +411,7 @@ export function SuperAdminSettingsClient() {
                 Full translations will be available in a future update.
               </p>
             </div>
+
             <button
               type="submit"
               disabled={preferencesSubmitting}

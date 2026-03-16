@@ -36,8 +36,8 @@ export function SettingsClient() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [preferencesSubmitting, setPreferencesSubmitting] = useState(false);
 
-  const isOrgAdmin = userRole === "org_admin";
-  const visibleTabs = isOrgAdmin
+  const showOrgTab = userRole === "org_admin" || (userRole === "super_admin" && !!organizationId);
+  const visibleTabs = showOrgTab
     ? [
         { key: "organization" as const, label: "Organization" },
         { key: "profile" as const, label: "Profile" },
@@ -55,10 +55,10 @@ export function SettingsClient() {
   }, [toast]);
 
   useEffect(() => {
-    if (!isOrgAdmin && activeTab === "organization") {
+    if (!showOrgTab && activeTab === "organization") {
       setActiveTab("profile");
     }
-  }, [activeTab, isOrgAdmin]);
+  }, [activeTab, showOrgTab]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -92,7 +92,7 @@ export function SettingsClient() {
       setEmail(profile?.email ?? user.email ?? "");
       setLanguage(profile?.language === "es" ? "es" : "en");
 
-      if (isOrgAdmin && organizationId) {
+      if (showOrgTab && organizationId) {
         const { data: organization, error: organizationError } = await supabase
           .from("organizations")
           .select("name")
@@ -110,7 +110,7 @@ export function SettingsClient() {
     };
 
     void loadSettings();
-  }, [isOrgAdmin, organizationId, supabase]);
+  }, [showOrgTab, organizationId, supabase]);
 
   const saveOrganization = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -269,7 +269,7 @@ export function SettingsClient() {
         </div>
       </section>
 
-      {activeTab === "organization" && isOrgAdmin ? (
+      {activeTab === "organization" && showOrgTab ? (
         <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
           <h2 className="text-lg font-semibold text-snap-textMain">Organization</h2>
           <form onSubmit={saveOrganization} className="mt-5 space-y-4">

@@ -7,6 +7,7 @@ import { RecentInvoicesTable } from "@/components/dashboard/RecentInvoicesTable"
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { Invoice, SummaryMetric } from "@/components/dashboard/types";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type RecentInvoiceRow = {
   id: string;
@@ -62,6 +63,7 @@ function formatInvoiceDate(date: string | null) {
 
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetric[]>([]);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
@@ -138,16 +140,16 @@ export default function DashboardPage() {
 
       if (errors.length > 0) {
         setSummaryMetrics([
-          { label: "Total projects", value: "0" },
-          { label: "Total invoices (this month)", value: "0" },
-          { label: "Total amount processed (this month)", value: formatCurrency(0) },
-          { label: "Pending / unpaid invoices", value: "0" },
+          { label: t("dashboard.summary.totalProjects"), value: "0" },
+          { label: t("dashboard.summary.totalInvoicesMonth"), value: "0" },
+          { label: t("dashboard.summary.totalAmountMonth"), value: formatCurrency(0) },
+          { label: t("dashboard.summary.pendingUnpaid"), value: "0" },
         ]);
         setRecentInvoices([]);
         setPeriodSpend([]);
         setCategorySpend([]);
         setHasAnyInvoices(false);
-        setErrorMessage("Unable to load dashboard data right now.");
+        setErrorMessage(t("dashboard.loadError"));
         setLoading(false);
         return;
       }
@@ -158,14 +160,14 @@ export default function DashboardPage() {
       );
 
       setSummaryMetrics([
-        { label: "Total projects", value: String(activeProjectsRes.count ?? 0) },
-        { label: "Total invoices (this month)", value: String(monthInvoicesRes.count ?? 0) },
+        { label: t("dashboard.summary.totalProjects"), value: String(activeProjectsRes.count ?? 0) },
+        { label: t("dashboard.summary.totalInvoicesMonth"), value: String(monthInvoicesRes.count ?? 0) },
         {
-          label: "Total amount processed (this month)",
+          label: t("dashboard.summary.totalAmountMonth"),
           value: formatCurrency(thisMonthAmount),
-          helperText: "Based on invoice totals",
+          helperText: t("dashboard.summary.basedOnInvoiceTotals"),
         },
-        { label: "Pending / unpaid invoices", value: String(unpaidRes.count ?? 0) },
+        { label: t("dashboard.summary.pendingUnpaid"), value: String(unpaidRes.count ?? 0) },
       ]);
 
       const mappedInvoices = ((recentInvoicesRes.data ?? []) as RecentInvoiceRow[]).map((row) => {
@@ -219,7 +221,9 @@ export default function DashboardPage() {
       const categoryTotals = new Map<string, number>();
 
       ((categoryInvoicesRes.data ?? []) as CategoryInvoiceRow[]).forEach((row) => {
-        const label = row.category_id ? categoryNameById.get(row.category_id) ?? "Uncategorized" : "Uncategorized";
+        const label = row.category_id
+          ? categoryNameById.get(row.category_id) ?? t("dashboard.charts.uncategorized")
+          : t("dashboard.charts.uncategorized");
         categoryTotals.set(label, (categoryTotals.get(label) ?? 0) + (row.total_amount ?? 0));
       });
 
@@ -230,17 +234,17 @@ export default function DashboardPage() {
       const topCategories = sortedCategories.slice(0, 6);
       const otherValue = sortedCategories.slice(6).reduce((sum, item) => sum + item.value, 0);
       const finalCategories =
-        otherValue > 0 ? [...topCategories, { label: "Other", value: otherValue }] : topCategories;
+        otherValue > 0 ? [...topCategories, { label: t("dashboard.charts.other"), value: otherValue }] : topCategories;
 
       setCategorySpend(finalCategories);
       setLoading(false);
     };
 
     void loadDashboard();
-  }, [supabase]);
+  }, [supabase, t]);
 
   return (
-    <DashboardLayout pageTitle="Dashboard">
+    <DashboardLayout pageTitle={t("dashboard.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         {errorMessage ? (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">

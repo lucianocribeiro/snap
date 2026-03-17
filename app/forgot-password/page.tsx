@@ -4,23 +4,25 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validateEmail(value: string) {
-  if (!value.trim()) return "Email is required.";
-  if (!emailPattern.test(value)) return "Enter a valid email address.";
+function validateEmail(value: string, t: (key: string) => string) {
+  if (!value.trim()) return t("auth.errors.emailRequired");
+  if (!emailPattern.test(value)) return t("auth.errors.emailInvalid");
   return "";
 }
 
 export default function ForgotPasswordPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const emailError = useMemo(() => validateEmail(email), [email]);
+  const emailError = useMemo(() => validateEmail(email, t), [email, t]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,26 +40,25 @@ export default function ForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">
       <AuthCard
-        title="Forgot Password"
-        description="Enter your account email and we will send reset instructions."
+        title={t("auth.forgotPasswordTitle")}
+        description={t("auth.forgotPasswordDescription")}
       >
         {submitted ? (
           <div className="space-y-6">
             <div className="rounded-lg border border-snap-border bg-snap-bg p-6">
               <p className="text-sm text-snap-textMain">
-                If an account exists for <span className="font-medium">{email}</span>, a reset
-                link has been sent.
+                {t("auth.ifAccountExists", { email })}
               </p>
             </div>
             <Link href="/login" className="block text-sm text-snap-textMain underline">
-              Back to login
+              {t("auth.backToLogin")}
             </Link>
           </div>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm text-snap-textDim">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 id="email"
@@ -75,11 +76,11 @@ export default function ForgotPasswordPage() {
               disabled={isSubmitting}
               className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
             >
-              {isSubmitting ? "Sending..." : "Send reset link"}
+              {isSubmitting ? t("auth.sending") : t("auth.sendResetLink")}
             </button>
 
             <Link href="/login" className="block text-sm text-snap-textMain underline">
-              Back to login
+              {t("auth.backToLogin")}
             </Link>
           </form>
         )}

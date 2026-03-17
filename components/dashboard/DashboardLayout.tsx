@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type DashboardLayoutProps = {
   pageTitle: string;
@@ -14,31 +15,31 @@ type DashboardLayoutProps = {
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
 };
 
 const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
   org_admin: [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/projects", label: "Projects" },
-    { href: "/invoices", label: "Invoices" },
-    { href: "/reports", label: "Reports" },
-    { href: "/users", label: "Users" },
-    { href: "/categories", label: "Categories" },
-    { href: "/settings", label: "Settings" },
+    { href: "/dashboard", labelKey: "nav.dashboard" },
+    { href: "/projects", labelKey: "nav.projects" },
+    { href: "/invoices", labelKey: "nav.invoices" },
+    { href: "/reports", labelKey: "nav.reports" },
+    { href: "/users", labelKey: "nav.users" },
+    { href: "/categories", labelKey: "nav.categories" },
+    { href: "/settings", labelKey: "nav.settings" },
   ],
   user: [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/projects", label: "Projects" },
-    { href: "/invoices", label: "Invoices" },
-    { href: "/reports", label: "Reports" },
-    { href: "/settings", label: "Settings" },
+    { href: "/dashboard", labelKey: "nav.dashboard" },
+    { href: "/projects", labelKey: "nav.projects" },
+    { href: "/invoices", labelKey: "nav.invoices" },
+    { href: "/reports", labelKey: "nav.reports" },
+    { href: "/settings", labelKey: "nav.settings" },
   ],
   super_admin: [
-    { href: "/super-admin/dashboard", label: "Dashboard" },
-    { href: "/super-admin/organizations", label: "Organizations" },
-    { href: "/super-admin/users", label: "Users" },
-    { href: "/super-admin/settings", label: "Settings" },
+    { href: "/super-admin/dashboard", labelKey: "nav.dashboard" },
+    { href: "/super-admin/organizations", labelKey: "nav.organizations" },
+    { href: "/super-admin/users", labelKey: "nav.users" },
+    { href: "/super-admin/settings", labelKey: "nav.settings" },
   ],
 };
 
@@ -65,6 +66,8 @@ function SidebarNav({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <nav className="mt-4 space-y-1">
       {items.map((item) => {
@@ -80,7 +83,7 @@ function SidebarNav({
               isActive ? "bg-snap-bgDeep text-snap-accent" : "text-snap-textDim",
             )}
           >
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}
@@ -90,17 +93,20 @@ function SidebarNav({
 
 function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
   const { activeContext, hasDualAccess, organizationName, switchContext } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   if (!hasDualAccess) return null;
 
   const currentLabel =
-    activeContext === "super_admin" ? "Super Admin" : `${organizationName ?? "Organization"} (Admin)`;
+    activeContext === "super_admin"
+      ? t("nav.superAdmin")
+      : `${organizationName ?? t("common.organization")} (${t("common.admin")})`;
   const nextContext = activeContext === "super_admin" ? "org_admin" : "super_admin";
   const nextLabel =
     nextContext === "super_admin"
-      ? "Switch to: Super Admin"
-      : `Switch to: ${organizationName ?? "Organization"} (Admin)`;
+      ? `${t("common.switchTo")} ${t("nav.superAdmin")}`
+      : `${t("common.switchTo")} ${organizationName ?? t("common.organization")} (${t("common.admin")})`;
 
   return (
     <div className="relative">
@@ -134,6 +140,7 @@ function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
 export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { user, userRole, activeContext, signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -188,7 +195,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                 type="button"
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:hidden"
-                aria-label="Open menu"
+                aria-label={t("common.openMenu")}
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -196,19 +203,38 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                 type="button"
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
                 className="hidden rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:inline-flex"
-                aria-label={sidebarCollapsed ? "Expand sidebar menu" : "Collapse sidebar menu"}
+                aria-label={sidebarCollapsed ? t("common.expandSidebar") : t("common.collapseSidebar")}
               >
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-semibold text-snap-textMain">{pageTitle}</h1>
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
+                {(["en", "es"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => void setLanguage(lang)}
+                    className={[
+                      "rounded px-2 py-1 text-xs uppercase",
+                      language === lang
+                        ? "bg-snap-card text-snap-textMain"
+                        : "text-snap-textDim hover:text-snap-textMain",
+                    ].join(" ")}
+                    aria-label={`${t("nav.language")} ${lang.toUpperCase()}`}
+                  >
+                    {lang.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
               <button
                 type="button"
                 onClick={() => setDropdownOpen((prev) => !prev)}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-snap-border bg-snap-bgSecondary text-xs font-semibold text-snap-textMain hover:border-snap-accent"
-                aria-label="Open user menu"
+                aria-label={t("common.openUserMenu")}
               >
                 {initialsFromEmail(user?.email)}
               </button>
@@ -220,14 +246,14 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                     onClick={() => setDropdownOpen(false)}
                     className="block px-3 py-2 text-sm text-snap-textDim transition hover:bg-snap-bgDeep hover:text-snap-textMain"
                   >
-                    Profile
+                    {t("nav.profile")}
                   </Link>
                   <Link
                     href="/settings"
                     onClick={() => setDropdownOpen(false)}
                     className="block px-3 py-2 text-sm text-snap-textDim transition hover:bg-snap-bgDeep hover:text-snap-textMain"
                   >
-                    Settings
+                    {t("nav.settings")}
                   </Link>
                   <button
                     type="button"
@@ -237,10 +263,11 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                     }}
                     className="block w-full px-3 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
                   >
-                    Sign Out
+                    {t("nav.logout")}
                   </button>
                 </div>
               ) : null}
+              </div>
             </div>
           </div>
 

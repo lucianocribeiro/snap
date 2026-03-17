@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type UserRole = "org_admin" | "user";
 type UserStatus = "active" | "inactive";
@@ -77,14 +78,6 @@ function mapUserRecord(record: UserProfileRecord): UserRow {
   };
 }
 
-function formatRole(role: UserRole) {
-  return role === "org_admin" ? "Admin" : "User";
-}
-
-function formatStatus(status: UserStatus) {
-  return status === "active" ? "Active" : "Inactive";
-}
-
 function formatLastLogin(value: string | null) {
   if (!value) return "-";
 
@@ -107,6 +100,7 @@ function isValidEmail(email: string) {
 export default function UsersPage() {
   const supabase = useMemo(() => createClient(), []);
   const { organizationId, userRole, user: currentUser } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [statusSource, setStatusSource] = useState<StatusSource>("is_active");
@@ -152,7 +146,7 @@ export default function UsersPage() {
         .order("first_name", { ascending: true });
 
       if (fallback.error) {
-        setPageError("Failed to load users.");
+        setPageError(t("users.failedLoadUsers"));
         setUsers([]);
         setLoading(false);
         return;
@@ -206,17 +200,17 @@ export default function UsersPage() {
     const email = inviteForm.email.trim().toLowerCase();
 
     if (!firstName || !lastName || !email) {
-      setInviteError("All fields are required.");
+      setInviteError(t("users.allFieldsRequired"));
       return;
     }
 
     if (!isValidEmail(email)) {
-      setInviteError("Enter a valid email address.");
+      setInviteError(t("auth.errors.emailInvalid"));
       return;
     }
 
     if (!organizationId) {
-      setInviteError("Organization not found for your account.");
+      setInviteError(t("users.orgNotFound"));
       return;
     }
 
@@ -240,14 +234,14 @@ export default function UsersPage() {
     });
 
     if (error) {
-      setInviteError(error.message || "Failed to invite user.");
+      setInviteError(error.message || t("users.failedInviteUser"));
       setInviteSubmitting(false);
       return;
     }
 
     setInviteSubmitting(false);
     closeInviteModal();
-    setToast("Invitation sent successfully.");
+    setToast(t("users.invitationSent"));
     await loadUsers();
   };
 
@@ -259,7 +253,7 @@ export default function UsersPage() {
     const lastName = editForm.lastName.trim();
 
     if (!firstName || !lastName) {
-      setEditError("First name and last name are required.");
+      setEditError(t("users.nameRequired"));
       return;
     }
 
@@ -281,7 +275,7 @@ export default function UsersPage() {
     const { error } = await supabase.from("user_profiles").update(payload).eq("id", editUser.id);
 
     if (error) {
-      setEditError("Failed to update user.");
+      setEditError(t("users.failedUpdateUser"));
       setEditSubmitting(false);
       return;
     }
@@ -302,7 +296,7 @@ export default function UsersPage() {
 
     setEditSubmitting(false);
     closeEditModal();
-    setToast("User updated.");
+    setToast(t("users.updated"));
   };
 
   const confirmStatusChange = async () => {
@@ -319,7 +313,7 @@ export default function UsersPage() {
     const { error } = await supabase.from("user_profiles").update(payload).eq("id", statusChangeUser.id);
 
     if (error) {
-      setToast("Failed to update user status.");
+      setToast(t("users.failedUpdateStatus"));
       setStatusSubmitting(false);
       setStatusChangeUser(null);
       return;
@@ -338,7 +332,7 @@ export default function UsersPage() {
 
     setStatusSubmitting(false);
     setStatusChangeUser(null);
-    setToast(nextStatus === "active" ? "User activated." : "User deactivated.");
+    setToast(nextStatus === "active" ? t("users.activated") : t("users.deactivated"));
   };
 
   const confirmRemoveUser = async () => {
@@ -352,19 +346,19 @@ export default function UsersPage() {
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setToast(result.error ?? "Failed to remove user.");
+      setToast(result.error ?? t("users.failedRemove"));
       setRemoveSubmitting(false);
       return;
     }
 
     setRemoveSubmitting(false);
     setRemoveUser(null);
-    setToast("User removed.");
+    setToast(t("users.removed"));
     await loadUsers();
   };
 
   return (
-    <DashboardLayout pageTitle="Users">
+    <DashboardLayout pageTitle={t("users.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         {toast ? (
           <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
@@ -373,7 +367,7 @@ export default function UsersPage() {
         ) : null}
 
         <PageHeader
-          title="Users"
+          title={t("users.title")}
           action={
             isOrgAdmin ? (
               <button
@@ -381,7 +375,7 @@ export default function UsersPage() {
                 onClick={() => setInviteOpen(true)}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
               >
-                + Invite User
+                {t("users.inviteUserWithPlus")}
               </button>
             ) : null
           }
@@ -389,15 +383,15 @@ export default function UsersPage() {
 
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading users...
+            {t("users.loadingUsers")}
           </div>
         ) : pageError ? (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-6 text-sm text-red-300">{pageError}</div>
         ) : users.length === 0 ? (
           <EmptyState
-            title="No users yet"
-            description="Invite your first team member to start collaborating."
-            actionLabel={isOrgAdmin ? "+ Invite User" : undefined}
+            title={t("users.emptyTitle")}
+            description={t("users.emptyDescription")}
+            actionLabel={isOrgAdmin ? t("users.inviteUserWithPlus") : undefined}
             onAction={isOrgAdmin ? () => setInviteOpen(true) : undefined}
           />
         ) : (
@@ -406,27 +400,30 @@ export default function UsersPage() {
               <table className="min-w-full text-left">
                 <thead>
                   <tr className="border-b border-snap-border bg-snap-bg/30 text-xs uppercase tracking-wide text-snap-textDim">
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Last login</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                    <th className="px-4 py-3 font-medium">{t("common.name")}</th>
+                    <th className="px-4 py-3 font-medium">{t("auth.email")}</th>
+                    <th className="px-4 py-3 font-medium">{t("users.role")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.status")}</th>
+                    <th className="px-4 py-3 font-medium">{t("users.lastLogin")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((user) => {
                     const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "-";
-                    const toggleLabel = user.status === "active" ? "Deactivate" : "Activate";
+                    const toggleLabel = user.status === "active" ? t("users.deactivate") : t("users.activate");
                     const canRemove = user.status === "inactive" && user.id !== currentUser?.id;
 
                     return (
                       <tr key={user.id} className="border-b border-snap-border/70 text-sm text-snap-textMain last:border-b-0">
                         <td className="px-4 py-3">{fullName}</td>
                         <td className="px-4 py-3 text-snap-textDim">{user.email}</td>
-                        <td className="px-4 py-3">{formatRole(user.role)}</td>
+                        <td className="px-4 py-3">{user.role === "org_admin" ? t("common.admin") : t("users.user")}</td>
                         <td className="px-4 py-3">
-                          <StatusBadge status={formatStatus(user.status)} variant="user" />
+                          <StatusBadge
+                            status={user.status === "active" ? t("status.active") : t("status.inactive")}
+                            variant="user"
+                          />
                         </td>
                         <td className="px-4 py-3 text-snap-textDim">{formatLastLogin(user.lastLoginAt)}</td>
                         <td className="px-4 py-3">
@@ -437,7 +434,7 @@ export default function UsersPage() {
                                 onClick={() => openEditModal(user)}
                                 className="text-snap-accent hover:underline"
                               >
-                                Edit
+                                {t("common.edit")}
                               </button>
                               <span className="text-snap-textDim">·</span>
                               <button
@@ -458,7 +455,7 @@ export default function UsersPage() {
                                 onClick={() => setRemoveUser(user)}
                                 className="text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                               >
-                                Remove
+                                {t("users.remove")}
                               </button>
                             </div>
                           ) : (
@@ -479,14 +476,14 @@ export default function UsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
           <div className="w-full max-w-lg space-y-5 rounded-xl border border-snap-border bg-snap-surface p-8 shadow-2xl">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-snap-textMain">Invite User</h3>
-              <p className="text-sm text-snap-textDim">Send an invitation email to join this organization.</p>
+              <h3 className="text-lg font-semibold text-snap-textMain">{t("users.inviteUser")}</h3>
+              <p className="text-sm text-snap-textDim">{t("users.inviteDescription")}</p>
             </div>
 
             <form onSubmit={submitInvite} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">First name *</label>
+                  <label className="text-sm text-snap-textDim">{t("users.firstName")} *</label>
                   <input
                     value={inviteForm.firstName}
                     onChange={(event) =>
@@ -496,7 +493,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Last name *</label>
+                  <label className="text-sm text-snap-textDim">{t("users.lastName")} *</label>
                   <input
                     value={inviteForm.lastName}
                     onChange={(event) =>
@@ -508,7 +505,7 @@ export default function UsersPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm text-snap-textDim">Email *</label>
+                <label className="text-sm text-snap-textDim">{t("auth.email")} *</label>
                 <input
                   type="email"
                   value={inviteForm.email}
@@ -520,8 +517,8 @@ export default function UsersPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm text-snap-textDim">Role</label>
-                <div className="rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textDim">User</div>
+                <label className="text-sm text-snap-textDim">{t("users.role")}</label>
+                <div className="rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textDim">{t("users.user")}</div>
               </div>
 
               {inviteError ? (
@@ -536,14 +533,14 @@ export default function UsersPage() {
                   onClick={closeInviteModal}
                   className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={inviteSubmitting}
                   className="rounded-md bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:opacity-60"
                 >
-                  {inviteSubmitting ? "Inviting..." : "Send Invite"}
+                  {inviteSubmitting ? t("users.inviting") : t("users.sendInvite")}
                 </button>
               </div>
             </form>
@@ -555,14 +552,14 @@ export default function UsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
           <div className="w-full max-w-lg space-y-5 rounded-xl border border-snap-border bg-snap-surface p-8 shadow-2xl">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-snap-textMain">Edit User</h3>
-              <p className="text-sm text-snap-textDim">Update profile details, role, and status.</p>
+              <h3 className="text-lg font-semibold text-snap-textMain">{t("users.editUser")}</h3>
+              <p className="text-sm text-snap-textDim">{t("users.editDescription")}</p>
             </div>
 
             <form onSubmit={saveUserEdits} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">First name *</label>
+                  <label className="text-sm text-snap-textDim">{t("users.firstName")} *</label>
                   <input
                     value={editForm.firstName}
                     onChange={(event) =>
@@ -574,7 +571,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Last name *</label>
+                  <label className="text-sm text-snap-textDim">{t("users.lastName")} *</label>
                   <input
                     value={editForm.lastName}
                     onChange={(event) =>
@@ -589,7 +586,7 @@ export default function UsersPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Role</label>
+                  <label className="text-sm text-snap-textDim">{t("users.role")}</label>
                   <select
                     value={editForm.role}
                     onChange={(event) =>
@@ -601,13 +598,13 @@ export default function UsersPage() {
                     }
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="user">User</option>
-                    <option value="org_admin">Admin</option>
+                    <option value="user">{t("users.user")}</option>
+                    <option value="org_admin">{t("common.admin")}</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Status</label>
+                  <label className="text-sm text-snap-textDim">{t("common.status")}</label>
                   <select
                     value={editForm.status}
                     onChange={(event) =>
@@ -622,8 +619,8 @@ export default function UsersPage() {
                     }
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t("status.active")}</option>
+                    <option value="inactive">{t("status.inactive")}</option>
                   </select>
                 </div>
               </div>
@@ -640,14 +637,14 @@ export default function UsersPage() {
                   onClick={closeEditModal}
                   className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={editSubmitting}
                   className="rounded-md bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:opacity-60"
                 >
-                  {editSubmitting ? "Saving..." : "Save Changes"}
+                  {editSubmitting ? t("settings.saving") : t("users.saveChanges")}
                 </button>
               </div>
             </form>
@@ -657,13 +654,13 @@ export default function UsersPage() {
 
       <ConfirmModal
         open={Boolean(statusChangeUser)}
-        title={statusChangeUser?.status === "active" ? "Deactivate User" : "Activate User"}
+        title={statusChangeUser?.status === "active" ? t("users.deactivateUser") : t("users.activateUser")}
         description={
           statusChangeUser?.status === "active"
-            ? "This user will no longer be able to access the organization."
-            : "This user will regain access to the organization."
+            ? t("users.deactivateDescription")
+            : t("users.activateDescription")
         }
-        confirmLabel={statusSubmitting ? "Saving..." : statusChangeUser?.status === "active" ? "Deactivate" : "Activate"}
+        confirmLabel={statusSubmitting ? t("settings.saving") : statusChangeUser?.status === "active" ? t("users.deactivate") : t("users.activate")}
         destructive={statusChangeUser?.status === "active"}
         onCancel={() => {
           if (statusSubmitting) return;
@@ -677,11 +674,11 @@ export default function UsersPage() {
 
       <ConfirmModal
         open={Boolean(removeUser)}
-        title="Remove User"
+        title={t("users.removeUser")}
         description={`This will permanently remove [${
-          removeUser ? [removeUser.firstName, removeUser.lastName].filter(Boolean).join(" ") || removeUser.email : "User Name"
-        }] from the platform. Their uploaded invoices will remain. This cannot be undone.`}
-        confirmLabel={removeSubmitting ? "Removing..." : "Remove"}
+          removeUser ? [removeUser.firstName, removeUser.lastName].filter(Boolean).join(" ") || removeUser.email : t("users.userName")
+        }] ${t("users.removeDescriptionSuffix")}`}
+        confirmLabel={removeSubmitting ? t("users.removing") : t("users.remove")}
         destructive
         onCancel={() => {
           if (removeSubmitting) return;

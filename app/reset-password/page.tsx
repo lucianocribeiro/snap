@@ -5,15 +5,16 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type ResetErrors = {
   password?: string;
   confirmPassword?: string;
 };
 
-function validatePassword(value: string) {
-  if (!value) return "New password is required.";
-  if (value.length < 8) return "Password must be at least 8 characters.";
+function validatePassword(value: string, t: (key: string) => string) {
+  if (!value) return t("auth.errors.newPasswordRequired");
+  if (value.length < 8) return t("auth.errors.passwordMinLength");
   return "";
 }
 
@@ -25,15 +26,16 @@ function getStrengthLevel(password: string) {
   return score;
 }
 
-function getStrengthLabel(score: number) {
-  if (score <= 1) return "Weak";
-  if (score === 2) return "Medium";
-  return "Strong";
+function getStrengthLabel(score: number, t: (key: string) => string) {
+  if (score <= 1) return t("auth.weak");
+  if (score === 2) return t("auth.medium");
+  return t("auth.strong");
 }
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -47,13 +49,13 @@ export default function ResetPasswordPage() {
   const strength = useMemo(() => getStrengthLevel(password), [password]);
 
   const errors: ResetErrors = useMemo(() => {
-    const passwordError = validatePassword(password);
+    const passwordError = validatePassword(password, t);
     let confirmPasswordError = "";
-    if (!confirmPassword) confirmPasswordError = "Please confirm your password.";
-    else if (confirmPassword !== password) confirmPasswordError = "Passwords must match.";
+    if (!confirmPassword) confirmPasswordError = t("auth.errors.confirmPasswordRequired");
+    else if (confirmPassword !== password) confirmPasswordError = t("auth.errors.passwordsMustMatch");
 
     return { password: passwordError, confirmPassword: confirmPasswordError };
-  }, [password, confirmPassword]);
+  }, [password, confirmPassword, t]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -73,13 +75,13 @@ export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">
       <AuthCard
-        title="Reset Password"
-        description="Set a new password for your account."
+        title={t("auth.resetPassword")}
+        description={t("auth.resetPasswordDescription")}
       >
         <form className="space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm text-snap-textDim">
-              New password
+              {t("auth.newPassword")}
             </label>
             <div className="flex items-center rounded-md border border-snap-border bg-snap-bg pr-2">
               <input
@@ -95,7 +97,7 @@ export default function ResetPasswordPage() {
                 onClick={() => setShowPassword((prev) => !prev)}
                 className="text-xs text-snap-textDim hover:text-snap-textMain"
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("auth.hide") : t("auth.show")}
               </button>
             </div>
             {touched.password && errors.password ? (
@@ -105,8 +107,8 @@ export default function ResetPasswordPage() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-snap-textDim">Password strength</span>
-              <span className="text-xs text-snap-textDim">{password ? getStrengthLabel(strength) : "-"}</span>
+              <span className="text-sm text-snap-textDim">{t("auth.passwordStrength")}</span>
+              <span className="text-xs text-snap-textDim">{password ? getStrengthLabel(strength, t) : "-"}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3].map((segment) => (
@@ -123,7 +125,7 @@ export default function ResetPasswordPage() {
 
           <div className="space-y-2">
             <label htmlFor="confirmPassword" className="text-sm text-snap-textDim">
-              Confirm new password
+              {t("auth.confirmNewPassword")}
             </label>
             <div className="flex items-center rounded-md border border-snap-border bg-snap-bg pr-2">
               <input
@@ -139,7 +141,7 @@ export default function ResetPasswordPage() {
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
                 className="text-xs text-snap-textDim hover:text-snap-textMain"
               >
-                {showConfirmPassword ? "Hide" : "Show"}
+                {showConfirmPassword ? t("auth.hide") : t("auth.show")}
               </button>
             </div>
             {touched.confirmPassword && errors.confirmPassword ? (
@@ -152,11 +154,11 @@ export default function ResetPasswordPage() {
             disabled={isSubmitting}
             className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
           >
-            {isSubmitting ? "Resetting..." : "Reset password"}
+            {isSubmitting ? t("auth.resetting") : t("auth.resetPasswordCta")}
           </button>
 
           <Link href="/login" className="block text-sm text-snap-textMain underline">
-            Back to login
+            {t("auth.backToLogin")}
           </Link>
         </form>
       </AuthCard>

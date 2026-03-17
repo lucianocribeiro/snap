@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type ProjectRecord = {
   id: string;
@@ -35,6 +36,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { userRole } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<ProjectTableRow[]>([]);
   const [search, setSearch] = useState("");
@@ -108,10 +110,10 @@ export default function ProjectsPage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Projects">
+    <DashboardLayout pageTitle={t("projects.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <PageHeader
-          title="Projects"
+          title={t("projects.title")}
           action={
             canManage ? (
               <button
@@ -119,7 +121,7 @@ export default function ProjectsPage() {
                 onClick={() => router.push("/projects/new")}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
               >
-                + New Project
+                {t("projects.newProjectWithPlus")}
               </button>
             ) : null
           }
@@ -129,7 +131,7 @@ export default function ProjectsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search project name..."
+            placeholder={t("projects.searchPlaceholder")}
             className="w-full rounded-md border border-snap-border bg-snap-surface px-3 py-2 text-sm text-snap-textMain outline-none"
           />
           <select
@@ -137,21 +139,21 @@ export default function ProjectsPage() {
             onChange={(event) => setStatusFilter(event.target.value as "All" | "Active" | "Archived")}
             className="rounded-md border border-snap-border bg-snap-surface px-3 py-2 text-sm text-snap-textMain outline-none"
           >
-            <option>All</option>
-            <option>Active</option>
-            <option>Archived</option>
+            <option value="All">{t("projects.statusAll")}</option>
+            <option value="Active">{t("projects.statusActive")}</option>
+            <option value="Archived">{t("projects.statusArchived")}</option>
           </select>
         </div>
 
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading projects...
+            {t("projects.loadingProjects")}
           </div>
         ) : filteredProjects.length === 0 ? (
           <EmptyState
-            title="No projects yet"
-            description="Create your first project to get started."
-            actionLabel={canManage ? "+ New Project" : undefined}
+            title={t("projects.emptyTitle")}
+            description={t("projects.emptyDescription")}
+            actionLabel={canManage ? t("projects.newProjectWithPlus") : undefined}
             onAction={canManage ? () => router.push("/projects/new") : undefined}
           />
         ) : (
@@ -165,9 +167,9 @@ export default function ProjectsPage() {
 
       <ConfirmModal
         open={Boolean(projectToArchive)}
-        title="Archive Project"
-        description="This project will be moved to archived status."
-        confirmLabel="Archive"
+        title={t("projects.archiveProjectTitle")}
+        description={t("projects.archiveProjectDescription")}
+        confirmLabel={t("projects.archive")}
         destructive
         onCancel={() => setProjectToArchive(null)}
         onConfirm={() => void archiveProject()}

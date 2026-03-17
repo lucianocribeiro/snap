@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export type InvoiceTableRow = {
   id: string;
@@ -46,27 +47,29 @@ export function InvoicesTable({
   showProjectColumn = true,
   onDelete,
 }: InvoicesTableProps) {
+  const { t } = useLanguage();
+
   if (invoices.length === 0) {
     return (
       <EmptyState
-        title="No invoices found"
-        description="Invoices matching your current filters will appear here."
+        title={t("dashboard.recentInvoices.emptyTitle")}
+        description={t("invoices.emptyByFilters")}
       />
     );
   }
 
   const columns = [
-    "Invoice #",
-    "Vendor",
-    ...(showProjectColumn ? ["Project"] : []),
-    "Category",
-    "Invoice Date",
-    "Due Date",
-    "Amount",
-    "Tax",
-    "Total",
-    "Status",
-    "Actions",
+    t("common.invoiceNumber"),
+    t("common.vendor"),
+    ...(showProjectColumn ? [t("common.project")] : []),
+    t("categories.title"),
+    t("invoices.invoiceDate"),
+    t("invoices.dueDate"),
+    t("common.amount"),
+    t("invoices.tax"),
+    t("invoices.total"),
+    t("common.status"),
+    t("common.actions"),
   ];
 
   return (
@@ -106,10 +109,10 @@ export function InvoicesTable({
               <td className="px-4 py-4 text-sm text-snap-textDim">
                 <div className="flex items-center gap-3">
                   <Link href={`/invoices/${invoice.id}`} className="hover:text-snap-textMain">
-                    View
+                    {t("common.view")}
                   </Link>
                   <Link href={`/invoices/${invoice.id}`} className="hover:text-snap-textMain">
-                    Edit
+                    {t("common.edit")}
                   </Link>
                   {canManage && onDelete ? (
                     <button
@@ -117,7 +120,7 @@ export function InvoicesTable({
                       onClick={() => onDelete(invoice)}
                       className="text-red-400 hover:text-red-300"
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
                   ) : null}
                 </div>

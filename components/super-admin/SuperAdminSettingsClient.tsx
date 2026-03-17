@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type TabKey = "profile" | "preferences";
 type LanguageOption = "en" | "es";
@@ -12,6 +13,7 @@ function cx(...classes: Array<string | false>) {
 
 export function SuperAdminSettingsClient() {
   const supabase = useMemo(() => createClient(), []);
+  const { language, setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,6 @@ export function SuperAdminSettingsClient() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [language, setLanguage] = useState<LanguageOption>("en");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -43,7 +44,7 @@ export function SuperAdminSettingsClient() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setError("Session expired. Please sign in again.");
+        setError(t("settings.sessionExpired"));
         setLoading(false);
         return;
       }
@@ -55,7 +56,7 @@ export function SuperAdminSettingsClient() {
         .maybeSingle();
 
       if (profileError) {
-        setError("Failed to load profile settings.");
+        setError(t("settings.failedLoadProfile"));
         setLoading(false);
         return;
       }
@@ -63,12 +64,11 @@ export function SuperAdminSettingsClient() {
       setFirstName(profile?.first_name ?? "");
       setLastName(profile?.last_name ?? "");
       setEmail(profile?.email ?? user.email ?? "");
-      setLanguage(profile?.language === "es" ? "es" : "en");
       setLoading(false);
     };
 
     void loadProfile();
-  }, [supabase]);
+  }, [supabase, t]);
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -80,7 +80,7 @@ export function SuperAdminSettingsClient() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("Session expired. Please sign in again.");
+      setError(t("settings.sessionExpired"));
       setProfileSubmitting(false);
       return;
     }
@@ -94,13 +94,13 @@ export function SuperAdminSettingsClient() {
       .eq("id", user.id);
 
     if (profileError) {
-      setError("Failed to save profile.");
+      setError(t("settings.failedSaveProfile"));
       setProfileSubmitting(false);
       return;
     }
 
     setProfileSubmitting(false);
-    setToast("Profile updated.");
+    setToast(t("settings.profileUpdated"));
   };
 
   const updatePassword = async (event: FormEvent<HTMLFormElement>) => {
@@ -109,7 +109,7 @@ export function SuperAdminSettingsClient() {
     setError(null);
 
     if (newPassword !== confirmNewPassword) {
-      setPasswordMismatch("New password and confirmation do not match.");
+      setPasswordMismatch(t("auth.errors.passwordsMustMatch"));
       return;
     }
 
@@ -127,43 +127,22 @@ export function SuperAdminSettingsClient() {
     setNewPassword("");
     setConfirmNewPassword("");
     setPasswordSubmitting(false);
-    setToast("Password updated.");
+    setToast(t("auth.passwordUpdated"));
   };
 
   const savePreferences = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPreferencesSubmitting(true);
     setError(null);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("Session expired. Please sign in again.");
-      setPreferencesSubmitting(false);
-      return;
-    }
-
-    const { error: preferencesError } = await supabase
-      .from("user_profiles")
-      .update({ language })
-      .eq("id", user.id);
-
-    if (preferencesError) {
-      setError("Failed to save language preference.");
-      setPreferencesSubmitting(false);
-      return;
-    }
-
+    await setLanguage(language as LanguageOption);
     setPreferencesSubmitting(false);
-    setToast("Preferences updated.");
+    setToast(t("settings.preferencesUpdated"));
   };
 
   if (loading) {
     return (
       <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-        Loading settings...
+        {t("common.loading")}
       </div>
     );
   }
@@ -185,8 +164,8 @@ export function SuperAdminSettingsClient() {
       <section className="rounded-xl border border-snap-border bg-snap-surface p-2">
         <div className="flex flex-wrap gap-2">
           {[
-            { key: "profile" as const, label: "Profile" },
-            { key: "preferences" as const, label: "Preferences" },
+            { key: "profile" as const, label: t("settings.profile") },
+            { key: "preferences" as const, label: t("settings.preferences") },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -207,11 +186,11 @@ export function SuperAdminSettingsClient() {
 
       {activeTab === "profile" ? (
       <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
-        <h2 className="text-lg font-semibold text-snap-textMain">Profile</h2>
+        <h2 className="text-lg font-semibold text-snap-textMain">{t("settings.profile")}</h2>
         <form onSubmit={saveProfile} className="mt-5 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">First name</label>
+              <label className="text-sm text-snap-textDim">{t("users.firstName")}</label>
               <input
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
@@ -220,7 +199,7 @@ export function SuperAdminSettingsClient() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Last name</label>
+              <label className="text-sm text-snap-textDim">{t("users.lastName")}</label>
               <input
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
@@ -231,7 +210,7 @@ export function SuperAdminSettingsClient() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm text-snap-textDim">Email</label>
+            <label className="text-sm text-snap-textDim">{t("auth.email")}</label>
             <input
               type="email"
               value={email}
@@ -248,15 +227,15 @@ export function SuperAdminSettingsClient() {
             disabled={profileSubmitting}
             className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {profileSubmitting ? "Saving..." : "Save profile"}
+            {profileSubmitting ? t("settings.saving") : t("settings.saveProfile")}
           </button>
         </form>
 
         <div className="mt-8 border-t border-snap-border pt-6">
-          <h3 className="text-base font-semibold text-snap-textMain">Change password</h3>
+          <h3 className="text-base font-semibold text-snap-textMain">{t("settings.changePassword")}</h3>
           <form onSubmit={updatePassword} className="mt-4 max-w-lg space-y-3">
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Current password</label>
+              <label className="text-sm text-snap-textDim">{t("settings.currentPassword")}</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -267,7 +246,7 @@ export function SuperAdminSettingsClient() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">New password</label>
+              <label className="text-sm text-snap-textDim">{t("auth.newPassword")}</label>
               <input
                 type="password"
                 value={newPassword}
@@ -279,7 +258,7 @@ export function SuperAdminSettingsClient() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Confirm new password</label>
+              <label className="text-sm text-snap-textDim">{t("auth.confirmNewPassword")}</label>
               <input
                 type="password"
                 value={confirmNewPassword}
@@ -296,7 +275,7 @@ export function SuperAdminSettingsClient() {
               disabled={passwordSubmitting}
               className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {passwordSubmitting ? "Updating..." : "Update Password"}
+              {passwordSubmitting ? t("settings.updating") : t("settings.updatePassword")}
             </button>
           </form>
         </div>
@@ -305,28 +284,25 @@ export function SuperAdminSettingsClient() {
 
       {activeTab === "preferences" ? (
         <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
-          <h2 className="text-lg font-semibold text-snap-textMain">Preferences</h2>
+          <h2 className="text-lg font-semibold text-snap-textMain">{t("settings.preferences")}</h2>
           <form onSubmit={savePreferences} className="mt-5 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Language preference</label>
+              <label className="text-sm text-snap-textDim">{t("settings.languagePreference")}</label>
               <select
                 value={language}
-                onChange={(event) => setLanguage(event.target.value as LanguageOption)}
+                onChange={(event) => void setLanguage(event.target.value as LanguageOption)}
                 className="w-full max-w-sm rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
               >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
+                <option value="en">{t("settings.english")}</option>
+                <option value="es">{t("settings.spanish")}</option>
               </select>
-              <p className="text-xs text-snap-textDim">
-                Full translations will be available in a future update.
-              </p>
             </div>
             <button
               type="submit"
               disabled={preferencesSubmitting}
               className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {preferencesSubmitting ? "Saving..." : "Save preferences"}
+              {preferencesSubmitting ? t("settings.saving") : t("settings.savePreferences")}
             </button>
           </form>
         </section>

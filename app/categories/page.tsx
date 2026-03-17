@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type CategoryRow = {
   id: string;
@@ -74,6 +75,7 @@ function formatDate(value: string) {
 export default function CategoriesPage() {
   const supabase = useMemo(() => createClient(), []);
   const { organizationId, userRole } = useAuth();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -132,7 +134,7 @@ export default function CategoriesPage() {
         invoicesResult.error ||
         requestsResult.error
       ) {
-        setToast("Failed to load categories.");
+        setToast(t("categories.failedLoadCategories"));
         setCategories([]);
         setProjects([]);
         setUsers([]);
@@ -186,7 +188,7 @@ export default function CategoriesPage() {
   const saveCategoryName = async (row: CategoryView) => {
     const normalizedName = editName.trim().replace(/\s+/g, " ");
     if (!normalizedName) {
-      setToast("Category name is required.");
+      setToast(t("categories.categoryNameRequired"));
       return;
     }
 
@@ -199,7 +201,7 @@ export default function CategoriesPage() {
 
     const updateCategory = await supabase.from("categories").update({ name: normalizedName }).eq("id", row.id);
     if (updateCategory.error) {
-      setToast("Failed to update category.");
+      setToast(t("categories.failedUpdateCategory"));
       setBusyKey(null);
       return;
     }
@@ -223,7 +225,7 @@ export default function CategoriesPage() {
 
     setEditingCategoryId(null);
     setBusyKey(null);
-    setToast("Category updated.");
+    setToast(t("categories.updated"));
   };
 
   const deleteCategory = async () => {
@@ -240,7 +242,7 @@ export default function CategoriesPage() {
 
     const { error } = await supabase.from("categories").delete().eq("id", categoryToDelete.id);
     if (error) {
-      setToast("Failed to delete category.");
+      setToast(t("categories.failedDeleteCategory"));
       setBusyKey(null);
       return;
     }
@@ -248,7 +250,7 @@ export default function CategoriesPage() {
     setCategories((previous) => previous.filter((category) => category.id !== categoryToDelete.id));
     setCategoryToDelete(null);
     setBusyKey(null);
-    setToast("Category deleted.");
+    setToast(t("categories.deleted"));
   };
 
   const approveRequest = async (request: CategoryRequestRow) => {
@@ -268,7 +270,7 @@ export default function CategoriesPage() {
       .single();
 
     if (insertError || !insertedCategory) {
-      setToast("Failed to approve request.");
+      setToast(t("categories.failedApproveRequest"));
       setBusyKey(null);
       return;
     }
@@ -279,7 +281,7 @@ export default function CategoriesPage() {
       .eq("id", request.id);
 
     if (statusError) {
-      setToast("Request approved, but status update failed.");
+      setToast(t("categories.requestApprovedStatusFailed"));
       setBusyKey(null);
       return;
     }
@@ -287,7 +289,7 @@ export default function CategoriesPage() {
     setCategories((previous) => [insertedCategory as CategoryRow, ...previous]);
     setPendingRequests((previous) => previous.filter((item) => item.id !== request.id));
     setBusyKey(null);
-    setToast("Category request approved.");
+    setToast(t("categories.requestApproved"));
   };
 
   const rejectRequest = async (request: CategoryRequestRow) => {
@@ -299,24 +301,24 @@ export default function CategoriesPage() {
       .eq("id", request.id);
 
     if (error) {
-      setToast("Failed to reject request.");
+      setToast(t("categories.failedRejectRequest"));
       setBusyKey(null);
       return;
     }
 
     setPendingRequests((previous) => previous.filter((item) => item.id !== request.id));
     setBusyKey(null);
-    setToast("Category request rejected.");
+    setToast(t("categories.requestRejected"));
   };
 
   const deleteDescription = categoryToDelete
     ? categoryToDelete.invoicesCount > 0
-      ? `This category is used by ${categoryToDelete.invoicesCount} invoices. Deleting it will remove the category from those invoices.`
-      : "This category will be deleted."
+      ? t("categories.deleteCategoryDescriptionWithInvoices", { count: categoryToDelete.invoicesCount })
+      : t("categories.deleteCategoryDescriptionSimple")
     : "";
 
   return (
-    <DashboardLayout pageTitle="Categories">
+    <DashboardLayout pageTitle={t("categories.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         {toast ? (
           <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
@@ -324,30 +326,30 @@ export default function CategoriesPage() {
           </div>
         ) : null}
 
-        <PageHeader title="Categories" />
+        <PageHeader title={t("categories.title")} />
 
         {loading || userRole === null ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading categories...
+            {t("categories.loadingCategories")}
           </div>
         ) : userRole !== "org_admin" ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Only admins can manage categories.
+            {t("categories.onlyAdmins")}
           </div>
         ) : categoryViews.length === 0 ? (
-          <EmptyState title="No categories yet" description="Categories will appear here once they are created." />
+          <EmptyState title={t("categories.emptyTitle")} description={t("categories.emptyDescription")} />
         ) : (
           <div className="overflow-hidden rounded-xl border border-snap-border bg-snap-surface">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
                 <thead>
                   <tr className="border-b border-snap-border bg-snap-bg/30 text-xs uppercase tracking-wide text-snap-textDim">
-                    <th className="px-4 py-3 font-medium">Category name</th>
-                    <th className="px-4 py-3 font-medium">Project</th>
-                    <th className="px-4 py-3 font-medium">Invoices using it</th>
-                    <th className="px-4 py-3 font-medium">Created by</th>
-                    <th className="px-4 py-3 font-medium">Created date</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                    <th className="px-4 py-3 font-medium">{t("categories.categoryName")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.project")}</th>
+                    <th className="px-4 py-3 font-medium">{t("categories.invoicesUsing")}</th>
+                    <th className="px-4 py-3 font-medium">{t("categories.createdBy")}</th>
+                    <th className="px-4 py-3 font-medium">{t("categories.createdDate")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -381,7 +383,7 @@ export default function CategoriesPage() {
                                 disabled={isBusy}
                                 className="text-snap-accent hover:underline disabled:opacity-50"
                               >
-                                Save
+                                {t("common.save")}
                               </button>
                               <span className="text-snap-textDim">·</span>
                               <button
@@ -390,7 +392,7 @@ export default function CategoriesPage() {
                                 disabled={isBusy}
                                 className="text-snap-textDim hover:text-snap-textMain disabled:opacity-50"
                               >
-                                Cancel
+                                {t("common.cancel")}
                               </button>
                             </div>
                           ) : (
@@ -403,7 +405,7 @@ export default function CategoriesPage() {
                                 }}
                                 className="text-snap-accent hover:underline"
                               >
-                                Edit
+                                {t("common.edit")}
                               </button>
                               <span className="text-snap-textDim">·</span>
                               <button
@@ -411,7 +413,7 @@ export default function CategoriesPage() {
                                 onClick={() => setCategoryToDelete(row)}
                                 className="text-red-300 hover:text-red-200"
                               >
-                                Delete
+                                {t("common.delete")}
                               </button>
                             </div>
                           )}
@@ -427,23 +429,23 @@ export default function CategoriesPage() {
 
         {userRole === "org_admin" && !loading ? (
           <section className="space-y-4 rounded-xl border border-snap-border bg-snap-surface p-5">
-            <h2 className="text-lg font-semibold text-snap-textMain">Category Requests</h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("categories.categoryRequests")}</h2>
 
             {pendingRequests.length === 0 ? (
               <div className="rounded-md border border-dashed border-snap-border bg-snap-bg/40 px-4 py-3 text-sm text-snap-textDim">
-                No pending category requests.
+                {t("categories.noPendingRequests")}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
                   <thead>
                     <tr className="border-b border-snap-border bg-snap-bg/30 text-xs uppercase tracking-wide text-snap-textDim">
-                      <th className="px-4 py-3 font-medium">Project name</th>
-                      <th className="px-4 py-3 font-medium">Requested category name</th>
-                      <th className="px-4 py-3 font-medium">Requesting user</th>
-                      <th className="px-4 py-3 font-medium">Date requested</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Actions</th>
+                      <th className="px-4 py-3 font-medium">{t("categories.projectName")}</th>
+                      <th className="px-4 py-3 font-medium">{t("categories.requestedCategoryName")}</th>
+                      <th className="px-4 py-3 font-medium">{t("categories.requestingUser")}</th>
+                      <th className="px-4 py-3 font-medium">{t("categories.dateRequested")}</th>
+                      <th className="px-4 py-3 font-medium">{t("common.status")}</th>
+                      <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -459,7 +461,7 @@ export default function CategoriesPage() {
                           <td className="px-4 py-3 text-snap-textDim">{requestUser}</td>
                           <td className="px-4 py-3 text-snap-textDim">{formatDate(request.created_at)}</td>
                           <td className="px-4 py-3">
-                            <StatusBadge status="Pending" variant="project" />
+                            <StatusBadge status={t("status.pending")} variant="project" />
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2 text-sm">
@@ -469,7 +471,7 @@ export default function CategoriesPage() {
                                 disabled={approveBusy || rejectBusy}
                                 className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
                               >
-                                Approve
+                                {t("categories.approve")}
                               </button>
                               <span className="text-snap-textDim">·</span>
                               <button
@@ -478,7 +480,7 @@ export default function CategoriesPage() {
                                 disabled={approveBusy || rejectBusy}
                                 className="text-red-300 hover:text-red-200 disabled:opacity-50"
                               >
-                                Reject
+                                {t("categories.reject")}
                               </button>
                             </div>
                           </td>
@@ -495,9 +497,9 @@ export default function CategoriesPage() {
 
       <ConfirmModal
         open={Boolean(categoryToDelete)}
-        title="Delete Category"
+        title={t("categories.deleteCategory")}
         description={deleteDescription}
-        confirmLabel={busyKey?.startsWith("delete-") ? "Deleting..." : "Delete"}
+        confirmLabel={busyKey?.startsWith("delete-") ? t("superAdmin.deleting") : t("common.delete")}
         destructive
         onCancel={() => {
           if (busyKey?.startsWith("delete-")) return;

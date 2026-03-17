@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type RecentOrganizationsTableProps = {
   organizations: OrganizationListItem[];
@@ -23,6 +24,7 @@ function formatDate(value: string) {
 
 export function RecentOrganizationsTable({ organizations }: RecentOrganizationsTableProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<OrganizationListItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -46,14 +48,14 @@ export function RecentOrganizationsTable({ organizations }: RecentOrganizationsT
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setToast(result.error ?? "Failed to update organization.");
+      setToast(result.error ?? t("superAdmin.failedUpdateOrganization"));
       setSubmitting(false);
       return;
     }
 
     setSubmitting(false);
     setSelected(null);
-    setToast("Organization deactivated.");
+    setToast(t("superAdmin.organizationDeactivated"));
     router.refresh();
   };
 
@@ -69,12 +71,12 @@ export function RecentOrganizationsTable({ organizations }: RecentOrganizationsT
         <table className="min-w-full divide-y divide-snap-border text-sm">
           <thead>
             <tr className="text-left text-snap-textDim">
-              <th className="px-3 py-3 font-medium">Organization</th>
-              <th className="px-3 py-3 font-medium">Admin email</th>
-              <th className="px-3 py-3 font-medium">Users</th>
-              <th className="px-3 py-3 font-medium">Date created</th>
-              <th className="px-3 py-3 font-medium">Status</th>
-              <th className="px-3 py-3 font-medium">Actions</th>
+              <th className="px-3 py-3 font-medium">{t("common.organization")}</th>
+              <th className="px-3 py-3 font-medium">{t("superAdmin.adminEmail")}</th>
+              <th className="px-3 py-3 font-medium">{t("superAdmin.users")}</th>
+              <th className="px-3 py-3 font-medium">{t("superAdmin.dateCreated")}</th>
+              <th className="px-3 py-3 font-medium">{t("common.status")}</th>
+              <th className="px-3 py-3 font-medium">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-snap-border/70">
@@ -85,15 +87,15 @@ export function RecentOrganizationsTable({ organizations }: RecentOrganizationsT
                 <td className="px-3 py-3 text-snap-textDim">{organization.usersCount}</td>
                 <td className="px-3 py-3 text-snap-textDim">{formatDate(organization.createdAt)}</td>
                 <td className="px-3 py-3">
-                  <StatusBadge
-                    variant="org"
-                    status={organization.status === "active" ? "Active" : "Inactive"}
-                  />
-                </td>
+                    <StatusBadge
+                      variant="org"
+                      status={organization.status === "active" ? t("status.active") : t("status.inactive")}
+                    />
+                  </td>
                 <td className="px-3 py-3 text-snap-textDim">
                   <div className="flex items-center gap-3">
                     <Link href={`/super-admin/organizations/${organization.id}`} className="hover:text-snap-accent">
-                      View
+                      {t("common.view")}
                     </Link>
                     <button
                       type="button"
@@ -101,7 +103,7 @@ export function RecentOrganizationsTable({ organizations }: RecentOrganizationsT
                       onClick={() => setSelected(organization)}
                       className="hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Deactivate
+                      {t("users.deactivate")}
                     </button>
                   </div>
                 </td>
@@ -113,9 +115,9 @@ export function RecentOrganizationsTable({ organizations }: RecentOrganizationsT
 
       <ConfirmModal
         open={Boolean(selected)}
-        title="Deactivate Organization"
-        description="This will disable organization access until it is activated again."
-        confirmLabel={submitting ? "Deactivating..." : "Deactivate"}
+        title={t("superAdmin.deactivateOrganization")}
+        description={t("superAdmin.deactivateOrganizationDescription")}
+        confirmLabel={submitting ? t("superAdmin.deactivating") : t("users.deactivate")}
         destructive
         onCancel={() => (submitting ? null : setSelected(null))}
         onConfirm={() => void deactivate()}

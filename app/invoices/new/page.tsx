@@ -9,6 +9,7 @@ import { CategoryRequestModal } from "@/components/shared/CategoryRequestModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StepIndicator } from "@/components/shared/StepIndicator";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 
 type ProjectOption = {
@@ -54,16 +55,8 @@ type ColumnMapping = {
   projectColumn: string | null;
 };
 
-const STEPS = ["Select Project", "Upload", "Review Extraction", "Map Columns", "Confirm"];
 const CATEGORY_LIMIT = 20;
-const CURRENCY_OPTIONS: Array<{ value: CurrencyCode; label: string }> = [
-  { value: "USD", label: "USD - US Dollar" },
-  { value: "ARS", label: "ARS - Argentine Peso" },
-  { value: "EUR", label: "EUR - Euro" },
-  { value: "GBP", label: "GBP - British Pound" },
-  { value: "BRL", label: "BRL - Brazilian Real" },
-  { value: "UYU", label: "UYU - Uruguayan Peso" },
-];
+const CURRENCY_OPTIONS: CurrencyCode[] = ["USD", "ARS", "EUR", "GBP", "BRL", "UYU"];
 
 const INITIAL_FORM: InvoiceFormState = {
   invoiceNumber: "",
@@ -99,9 +92,9 @@ function confidenceDotClass(confidence: ExtractedField["confidence"]) {
 }
 
 function confidenceLabel(confidence: ExtractedField["confidence"]) {
-  if (confidence === "high") return "High confidence";
-  if (confidence === "medium") return "Review suggested";
-  return "Manual input required";
+  if (confidence === "high") return "confidence.high";
+  if (confidence === "medium") return "confidence.reviewSuggested";
+  return "confidence.manualInputRequired";
 }
 
 function sanitizeFileName(name: string) {
@@ -129,13 +122,14 @@ function toInputDateFormat(value: string | undefined): string {
 
 function normalizeCurrency(value: string | undefined): CurrencyCode {
   const normalized = (value ?? "").trim().toUpperCase();
-  const validOptions = new Set(CURRENCY_OPTIONS.map((option) => option.value));
+  const validOptions = new Set(CURRENCY_OPTIONS);
   return validOptions.has(normalized as CurrencyCode) ? (normalized as CurrencyCode) : "USD";
 }
 
 export default function NewInvoicePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const { user, organizationId } = useAuth();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
@@ -164,6 +158,13 @@ export default function NewInvoicePage() {
   const [mappingByFieldId, setMappingByFieldId] = useState<Record<string, string>>({});
   const [suggestedMappings, setSuggestedMappings] = useState<ColumnMapping[]>([]);
   const [vendorNameFromOCR, setVendorNameFromOCR] = useState<string | null>(null);
+  const steps = [
+    t("invoices.steps.selectProject"),
+    t("invoices.steps.upload"),
+    t("invoices.steps.reviewExtraction"),
+    t("invoices.steps.mapColumns"),
+    t("invoices.steps.confirm"),
+  ];
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -202,7 +203,7 @@ export default function NewInvoicePage() {
   const canSave = Boolean(formState.categoryId && formState.status);
 
   const goToStep = (nextStep: number) => {
-    const boundedStep = Math.min(Math.max(nextStep, 1), STEPS.length);
+    const boundedStep = Math.min(Math.max(nextStep, 1), steps.length);
     setStep((currentStep) => {
       if (currentStep === boundedStep) return currentStep;
       setStepHistory((previousHistory) => [...previousHistory, currentStep]);
@@ -281,7 +282,7 @@ export default function NewInvoicePage() {
 
     const alreadyExists = categories.some((category) => normalizeCategory(category.name) === normalizedName);
     if (alreadyExists) {
-      setToast("Category already exists for this project.");
+      setToast(t("invoices.categoryAlreadyExists"));
       return;
     }
 
@@ -295,7 +296,7 @@ export default function NewInvoicePage() {
     } = await supabase.auth.getUser();
 
     if (!authUser) {
-      setToast("Session expired. Please sign in again.");
+      setToast(t("settings.sessionExpired"));
       return;
     }
 
@@ -314,7 +315,7 @@ export default function NewInvoicePage() {
       .single();
 
     if (error || !data) {
-      setToast("Failed to add category.");
+      setToast(t("invoices.failedAddCategory"));
       setIsAddingCategory(false);
       return;
     }
@@ -333,17 +334,17 @@ export default function NewInvoicePage() {
     note: string;
   }) => {
     if (!selectedProjectId) {
-      throw new Error("Select a project before requesting a category.");
+      throw new Error(t("invoices.selectProjectBeforeCategoryRequest"));
     }
 
     const authUserId = user?.id;
     if (!authUserId) {
-      throw new Error("Session expired. Please sign in again.");
+      throw new Error(t("settings.sessionExpired"));
     }
 
     const resolvedOrganizationId = await resolveOrganizationId();
     if (!resolvedOrganizationId) {
-      throw new Error("Could not resolve organization for this request.");
+      throw new Error(t("invoices.resolveOrganizationFailed"));
     }
 
     const { error } = await supabase.from("category_requests").insert({
@@ -356,23 +357,23 @@ export default function NewInvoicePage() {
     });
 
     if (error) {
-      throw new Error("Failed to send request.");
+      throw new Error(t("categories.failedSendRequest"));
     }
 
     setRequestModalOpen(false);
     setCategoryInput("");
-    setToast("Category request sent.");
+    setToast(t("projects.form.categoryRequestSent"));
   };
 
   const runOCRForFile = async (nextFile: File) => {
     if (!selectedProjectId) {
-      setToast("Select a project before uploading.");
+      setToast(t("invoices.selectProjectBeforeUpload"));
       return;
     }
 
     const resolvedOrganizationId = await resolveOrganizationId();
     if (!resolvedOrganizationId) {
-      setToast("Could not resolve organization. Please try again.");
+      setToast(t("invoices.resolveOrganizationTryAgain"));
       return;
     }
 
@@ -396,7 +397,7 @@ export default function NewInvoicePage() {
 
     if (uploadError) {
       setIsReadingInvoice(false);
-      setToast("Could not read invoice. Please enter details manually.");
+      setToast(t("invoices.ocrReadFailedManual"));
       goToStep(5);
       return;
     }
@@ -420,7 +421,7 @@ export default function NewInvoicePage() {
 
     if (error || !data) {
       setIsReadingInvoice(false);
-      setToast("Could not read invoice. Please enter details manually.");
+      setToast(t("invoices.ocrReadFailedManual"));
       goToStep(5);
       return;
     }
@@ -444,7 +445,7 @@ export default function NewInvoicePage() {
 
     if (overallConfidence < 0.3 && nextExtractedFields.length < 3) {
       setIsReadingInvoice(false);
-      setInvoiceValidationError("This does not appear to be an invoice. Please upload a valid invoice file.");
+      setInvoiceValidationError(t("invoices.invalidInvoiceFile"));
       return;
     }
 
@@ -462,7 +463,7 @@ export default function NewInvoicePage() {
   const handleFileSelect = (nextFile: File | null) => {
     if (!nextFile) return;
     if (nextFile.size > 10 * 1024 * 1024) {
-      setToast("Max file size is 10MB.");
+      setToast(t("invoices.maxFileSize"));
       return;
     }
     void runOCRForFile(nextFile);
@@ -532,7 +533,7 @@ export default function NewInvoicePage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setToast("Session expired. Please sign in again.");
+      setToast(t("settings.sessionExpired"));
       setIsSaving(false);
       return;
     }
@@ -577,7 +578,7 @@ export default function NewInvoicePage() {
     const { data, error } = await supabase.from("invoices").insert(payload).select("id").single();
 
     if (error || !data) {
-      setToast("Failed to save invoice.");
+      setToast(t("invoices.failedSaveInvoice"));
       setIsSaving(false);
       return;
     }
@@ -592,7 +593,7 @@ export default function NewInvoicePage() {
     if (column === "invoiceNumber") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Invoice #</label>
+          <label className="text-sm text-snap-textDim">{t("common.invoiceNumber")}</label>
           <input
             value={formState.invoiceNumber}
             onChange={(event) => updateField("invoiceNumber", event.target.value)}
@@ -605,7 +606,7 @@ export default function NewInvoicePage() {
     if (column === "vendor") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Vendor</label>
+          <label className="text-sm text-snap-textDim">{t("common.vendor")}</label>
           <input
             value={formState.vendor}
             onChange={(event) => updateField("vendor", event.target.value)}
@@ -618,7 +619,7 @@ export default function NewInvoicePage() {
     if (column === "invoiceDate") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Invoice Date</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.invoiceDate")}</label>
           <input
             type="date"
             value={formState.invoiceDate}
@@ -632,7 +633,7 @@ export default function NewInvoicePage() {
     if (column === "dueDate") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Due Date</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.dueDate")}</label>
           <input
             type="date"
             value={formState.dueDate}
@@ -646,7 +647,7 @@ export default function NewInvoicePage() {
     if (column === "amount") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Amount (excl. tax)</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.amountExclTax")}</label>
           <input
             type="number"
             step="0.01"
@@ -661,7 +662,7 @@ export default function NewInvoicePage() {
     if (column === "tax") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Tax</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.tax")}</label>
           <input
             type="number"
             step="0.01"
@@ -676,7 +677,7 @@ export default function NewInvoicePage() {
     if (column === "totalAmount") {
       return (
         <div className="space-y-2">
-          <label className="text-sm text-snap-textDim">Total Amount</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.totalAmount")}</label>
           <input
             type="number"
             step="0.01"
@@ -691,7 +692,7 @@ export default function NewInvoicePage() {
     if (column === "notes") {
       return (
         <div className="space-y-2 md:col-span-2">
-          <label className="text-sm text-snap-textDim">Notes</label>
+          <label className="text-sm text-snap-textDim">{t("common.notes")}</label>
           <textarea
             rows={3}
             value={formState.notes}
@@ -721,9 +722,9 @@ export default function NewInvoicePage() {
 
   return (
     <>
-      <DashboardLayout pageTitle="Add Invoice">
+      <DashboardLayout pageTitle={t("invoices.addInvoice")}>
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <PageHeader title="Add Invoice" description="Manual entry flow for Phase 5." />
+        <PageHeader title={t("invoices.addInvoice")} description={t("invoices.manualEntryDescription")} />
 
         {toast ? (
           <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
@@ -731,27 +732,27 @@ export default function NewInvoicePage() {
           </div>
         ) : null}
 
-        <StepIndicator steps={STEPS} currentStep={step} />
+        <StepIndicator steps={steps} currentStep={step} />
 
         <section className="relative rounded-xl border border-snap-border bg-snap-surface p-6">
           {isReadingInvoice ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-snap-bg/80">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-snap-border border-t-snap-textMain" />
-                <p className="text-sm text-snap-textMain">Reading your invoice...</p>
+                <p className="text-sm text-snap-textMain">{t("invoices.readingInvoice")}</p>
               </div>
             </div>
           ) : null}
 
           {step === 1 ? (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-snap-textMain">Select Project</h2>
+              <h2 className="text-lg font-semibold text-snap-textMain">{t("invoices.steps.selectProject")}</h2>
               <select
                 value={selectedProjectId}
                 onChange={(event) => setSelectedProjectId(event.target.value)}
                 className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
               >
-                <option value="">Select an active project</option>
+                <option value="">{t("invoices.selectActiveProject")}</option>
                 {activeProjects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -763,7 +764,7 @@ export default function NewInvoicePage() {
 
           {step === 2 ? (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-snap-textMain">Upload Invoice File</h2>
+              <h2 className="text-lg font-semibold text-snap-textMain">{t("invoices.uploadInvoiceFile")}</h2>
               <label className="block rounded-lg border border-dashed border-snap-border bg-snap-bg p-8 text-center">
                 <input
                   type="file"
@@ -771,17 +772,17 @@ export default function NewInvoicePage() {
                   className="hidden"
                   onChange={(event) => handleFileSelect(event.target.files?.[0] ?? null)}
                 />
-                <span className="text-sm text-snap-textMain">Click to upload PDF, JPG, or PNG (max 10MB)</span>
+                <span className="text-sm text-snap-textMain">{t("invoices.uploadFileHint")}</span>
               </label>
 
               {file ? (
                 <div className="space-y-2 rounded-md border border-snap-border bg-snap-bg p-3">
-                  <p className="text-sm text-snap-textDim">Selected file: {file.name}</p>
+                  <p className="text-sm text-snap-textDim">{t("invoices.selectedFile", { name: file.name })}</p>
                   {filePreviewUrl && file.type.startsWith("image/") ? (
-                    <img src={filePreviewUrl} alt="Invoice preview" className="max-h-72 rounded border border-snap-border" />
+                    <img src={filePreviewUrl} alt={t("invoices.invoicePreviewAlt")} className="max-h-72 rounded border border-snap-border" />
                   ) : null}
                   {filePreviewUrl && file.type === "application/pdf" ? (
-                    <iframe title="Invoice preview" src={filePreviewUrl} className="h-72 w-full rounded border border-snap-border" />
+                    <iframe title={t("invoices.invoicePreviewAlt")} src={filePreviewUrl} className="h-72 w-full rounded border border-snap-border" />
                   ) : null}
                 </div>
               ) : null}
@@ -790,17 +791,17 @@ export default function NewInvoicePage() {
                 <button
                   type="button"
                   disabled
-                  title="Available on mobile app"
+                  title={t("invoices.availableOnMobileApp")}
                   className="cursor-not-allowed rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textDim opacity-70"
                 >
-                  Take photo
+                  {t("invoices.takePhoto")}
                 </button>
                 <button
                   type="button"
                   onClick={() => goToStep(5)}
                   className="rounded-md border border-snap-border bg-snap-card px-3 py-2 text-sm font-medium text-snap-textMain"
                 >
-                  Skip OCR / Enter manually
+                  {t("invoices.skipOCR")}
                 </button>
               </div>
 
@@ -813,7 +814,7 @@ export default function NewInvoicePage() {
                       onClick={() => setInvoiceValidationError(null)}
                       className="text-xs font-medium text-red-200 underline underline-offset-2 hover:text-red-100"
                     >
-                      Dismiss
+                      {t("common.dismiss")}
                     </button>
                   </div>
                 </div>
@@ -824,19 +825,19 @@ export default function NewInvoicePage() {
           {step === 3 ? (
             <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-3 rounded-lg border border-snap-border bg-snap-bg p-4">
-                <h2 className="text-base font-semibold text-snap-textMain">Invoice Preview</h2>
+                <h2 className="text-base font-semibold text-snap-textMain">{t("invoices.invoicePreview")}</h2>
                 {filePreviewUrl && file?.type === "application/pdf" ? (
-                  <iframe title="Invoice preview" src={filePreviewUrl} className="h-80 w-full rounded border border-snap-border" />
+                  <iframe title={t("invoices.invoicePreviewAlt")} src={filePreviewUrl} className="h-80 w-full rounded border border-snap-border" />
                 ) : null}
                 {filePreviewUrl && file?.type.startsWith("image/") ? (
-                  <img src={filePreviewUrl} alt="Invoice preview" className="max-h-80 w-full rounded border border-snap-border object-contain" />
+                  <img src={filePreviewUrl} alt={t("invoices.invoicePreviewAlt")} className="max-h-80 w-full rounded border border-snap-border object-contain" />
                 ) : null}
               </div>
 
               <div className="space-y-3 rounded-lg border border-snap-border bg-snap-bg p-4">
-                <h2 className="text-base font-semibold text-snap-textMain">Extracted Fields</h2>
+                <h2 className="text-base font-semibold text-snap-textMain">{t("invoices.extractedFields")}</h2>
                 {extractedFields.length === 0 ? (
-                  <p className="text-sm text-snap-textDim">No fields were extracted. Continue with manual entry.</p>
+                  <p className="text-sm text-snap-textDim">{t("invoices.noExtractedFields")}</p>
                 ) : (
                   <div className="space-y-3">
                     {extractedFields.map((field) => (
@@ -844,7 +845,7 @@ export default function NewInvoicePage() {
                         <div className="flex items-center justify-between">
                           <label className="text-sm text-snap-textDim">{field.label}</label>
                           <span
-                            title={confidenceLabel(field.confidence)}
+                            title={t(confidenceLabel(field.confidence))}
                             className={`inline-block h-2.5 w-2.5 rounded-full ${confidenceDotClass(field.confidence)}`}
                           />
                         </div>
@@ -869,9 +870,9 @@ export default function NewInvoicePage() {
 
           {step === 4 ? (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-snap-textMain">Map Columns</h2>
+              <h2 className="text-lg font-semibold text-snap-textMain">{t("invoices.mapColumns")}</h2>
               {extractedFields.length === 0 ? (
-                <p className="text-sm text-snap-textDim">No OCR fields available. Continue to manual entry.</p>
+                <p className="text-sm text-snap-textDim">{t("invoices.noOCRFields")}</p>
               ) : (
                 <div className="space-y-3">
                   {extractedFields.map((field) => (
@@ -888,7 +889,7 @@ export default function NewInvoicePage() {
                           }
                           className="w-full rounded-md border border-snap-border bg-snap-surface px-3 py-2 text-sm text-snap-textMain outline-none"
                         >
-                          <option value="">Do not import</option>
+                          <option value="">{t("invoices.doNotImport")}</option>
                           {selectedColumns.map((column) => (
                             <option key={column} value={column}>
                               {getProjectColumnLabel(column)}
@@ -905,49 +906,47 @@ export default function NewInvoicePage() {
 
           {step === 5 ? (
             <div className="space-y-5">
-              <h2 className="text-lg font-semibold text-snap-textMain">Confirm & Save</h2>
+              <h2 className="text-lg font-semibold text-snap-textMain">{t("invoices.confirmAndSave")}</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
                   <div key={column}>{renderField(column)}</div>
                 ))}
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Currency</label>
+                  <label className="text-sm text-snap-textDim">{t("invoices.currency")}</label>
                   <select
                     value={formState.currency}
                     onChange={(event) => updateField("currency", event.target.value as CurrencyCode)}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
                     {CURRENCY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                      <option key={option} value={option}>
+                        {t(`invoices.currencyOptions.${option}`)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Category *</label>
+                  <label className="text-sm text-snap-textDim">{t("categories.title")} *</label>
                   <select
                     value={formState.categoryId}
                     onChange={(event) => updateField("categoryId", event.target.value)}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="">Select a category</option>
+                    <option value="">{t("invoices.selectCategory")}</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-snap-textDim">
-                    {categories.length} / {CATEGORY_LIMIT} categories
-                  </p>
+                  <p className="text-xs text-snap-textDim">{t("invoices.categoriesCount", { count: categories.length, limit: CATEGORY_LIMIT })}</p>
                   <div className="flex gap-2">
                     <input
                       value={categoryInput}
                       onChange={(event) => setCategoryInput(event.target.value)}
-                      placeholder="Add a category"
+                      placeholder={t("projects.form.addCategoryPlaceholder")}
                       className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                     />
                     <button
@@ -960,25 +959,25 @@ export default function NewInvoicePage() {
                       }
                       className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
                     >
-                      {isAddingCategory ? "Adding..." : "Add"}
+                      {isAddingCategory ? t("invoices.addingCategory") : t("common.add")}
                     </button>
                   </div>
                   {categories.length >= CATEGORY_LIMIT ? (
                     <p className="text-xs text-snap-textDim">
-                      You have reached the 20-category limit for this project.
+                      {t("categories.limitReached")}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Status *</label>
+                  <label className="text-sm text-snap-textDim">{t("common.status")} *</label>
                   <select
                     value={formState.status}
                     onChange={(event) => updateField("status", event.target.value as "paid" | "unpaid")}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="paid">Paid</option>
-                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">{t("status.paid")}</option>
+                    <option value="unpaid">{t("status.unpaid")}</option>
                   </select>
                 </div>
               </div>
@@ -992,7 +991,7 @@ export default function NewInvoicePage() {
               onClick={goBackStep}
               className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
             >
-              Back
+              {t("common.back")}
             </button>
             {step < 5 ? (
               <button
@@ -1012,7 +1011,7 @@ export default function NewInvoicePage() {
                 }}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
               >
-                {step === 4 ? "Confirm Mapping" : "Next"}
+                {step === 4 ? t("invoices.confirmMapping") : t("common.next")}
               </button>
             ) : (
               <button
@@ -1021,7 +1020,7 @@ export default function NewInvoicePage() {
                 onClick={() => void saveInvoice()}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save Invoice"}
+                {isSaving ? t("settings.saving") : t("invoices.saveInvoice")}
               </button>
             )}
           </div>

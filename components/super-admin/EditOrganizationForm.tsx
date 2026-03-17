@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type EditOrganizationFormProps = {
   organization: OrganizationListItem;
@@ -10,6 +11,7 @@ type EditOrganizationFormProps = {
 
 export function EditOrganizationForm({ organization }: EditOrganizationFormProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [name, setName] = useState(organization.name);
   const [status, setStatus] = useState<"active" | "inactive">(organization.status);
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +21,7 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
     event.preventDefault();
 
     if (!name.trim()) {
-      setError("Organization name is required.");
+      setError(t("superAdmin.organizationNameRequired"));
       return;
     }
 
@@ -35,7 +37,7 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setError(result.error ?? "Failed to update organization.");
+      setError(result.error ?? t("superAdmin.failedUpdateOrganization"));
       setSubmitting(false);
       return;
     }
@@ -47,7 +49,7 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
   return (
     <form onSubmit={submit} className="space-y-6 rounded-xl border border-snap-border bg-snap-surface p-6">
       <div className="space-y-2">
-        <label className="text-sm text-snap-textDim">Organization name</label>
+        <label className="text-sm text-snap-textDim">{t("settings.organizationName")}</label>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -57,14 +59,14 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm text-snap-textDim">Status</label>
+        <label className="text-sm text-snap-textDim">{t("common.status")}</label>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as "active" | "inactive")}
           className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
         >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="active">{t("status.active")}</option>
+          <option value="inactive">{t("status.inactive")}</option>
         </select>
       </div>
 
@@ -76,14 +78,14 @@ export function EditOrganizationForm({ organization }: EditOrganizationFormProps
           onClick={() => router.push(`/super-admin/organizations/${organization.id}`)}
           className="rounded-md border border-snap-border bg-transparent px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
           disabled={submitting}
           className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {submitting ? "Saving..." : "Save changes"}
+          {submitting ? t("settings.saving") : t("users.saveChanges")}
         </button>
       </div>
     </form>

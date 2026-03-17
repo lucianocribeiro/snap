@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type SuperAdminLayoutShellProps = {
   pageTitle?: string;
@@ -14,14 +15,14 @@ type SuperAdminLayoutShellProps = {
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
 };
 
 const navItems: NavItem[] = [
-  { href: "/super-admin/dashboard", label: "Dashboard" },
-  { href: "/super-admin/organizations", label: "Organizations" },
-  { href: "/super-admin/users", label: "Users" },
-  { href: "/super-admin/settings", label: "Settings" },
+  { href: "/super-admin/dashboard", labelKey: "nav.dashboard" },
+  { href: "/super-admin/organizations", labelKey: "nav.organizations" },
+  { href: "/super-admin/users", labelKey: "nav.users" },
+  { href: "/super-admin/settings", labelKey: "nav.settings" },
 ];
 
 function cx(...classes: Array<string | false | undefined>) {
@@ -30,6 +31,7 @@ function cx(...classes: Array<string | false | undefined>) {
 
 function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const { signOut } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <nav className="mt-4 space-y-1">
@@ -46,16 +48,16 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
               isActive ? "bg-snap-bgDeep text-snap-accent" : "text-snap-textDim",
             )}
           >
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}
       <button
         type="button"
-        onClick={() => void signOut()}
-        className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+      onClick={() => void signOut()}
+      className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
       >
-        Logout
+        {t("superAdmin.logout")}
       </button>
     </nav>
   );
@@ -63,17 +65,20 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
 
 function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
   const { activeContext, hasDualAccess, organizationName, switchContext } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   if (!hasDualAccess) return null;
 
   const currentLabel =
-    activeContext === "super_admin" ? "Super Admin" : `${organizationName ?? "Organization"} (Admin)`;
+    activeContext === "super_admin"
+      ? t("nav.superAdmin")
+      : `${organizationName ?? t("common.organization")} (${t("common.admin")})`;
   const nextContext = activeContext === "super_admin" ? "org_admin" : "super_admin";
   const nextLabel =
     nextContext === "super_admin"
-      ? "Switch to: Super Admin"
-      : `Switch to: ${organizationName ?? "Organization"} (Admin)`;
+      ? `${t("common.switchTo")} ${t("nav.superAdmin")}`
+      : `${t("common.switchTo")} ${organizationName ?? t("common.organization")} (${t("common.admin")})`;
 
   return (
     <div className="relative">
@@ -106,6 +111,7 @@ function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
 
 export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutShellProps) {
   const pathname = usePathname();
+  const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -142,7 +148,7 @@ export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutS
                 type="button"
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:hidden"
-                aria-label="Open menu"
+                aria-label={t("common.openMenu")}
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -150,11 +156,29 @@ export function SuperAdminLayoutShell({ pageTitle, children }: SuperAdminLayoutS
                 type="button"
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
                 className="hidden rounded-md p-2 text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain md:inline-flex"
-                aria-label={sidebarCollapsed ? "Expand sidebar menu" : "Collapse sidebar menu"}
+                aria-label={sidebarCollapsed ? t("common.expandSidebar") : t("common.collapseSidebar")}
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <h1 className="text-xl font-semibold text-snap-textMain">{pageTitle ?? "Super Admin"}</h1>
+              <h1 className="text-xl font-semibold text-snap-textMain">{pageTitle ?? t("superAdmin.title")}</h1>
+            </div>
+            <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
+              {(["en", "es"] as const).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => void setLanguage(lang)}
+                  className={[
+                    "rounded px-2 py-1 text-xs uppercase",
+                    language === lang
+                      ? "bg-snap-card text-snap-textMain"
+                      : "text-snap-textDim hover:text-snap-textMain",
+                  ].join(" ")}
+                  aria-label={`${t("nav.language")} ${lang.toUpperCase()}`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
             </div>
           </div>
 

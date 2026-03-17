@@ -8,19 +8,13 @@ import { PROJECT_COLUMN_LABELS } from "@/components/projects/constants";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 
 type CategoryOption = { id: string; name: string };
 type CurrencyCode = "USD" | "ARS" | "EUR" | "GBP" | "BRL" | "UYU";
 
-const CURRENCY_OPTIONS: Array<{ value: CurrencyCode; label: string }> = [
-  { value: "USD", label: "USD - US Dollar" },
-  { value: "ARS", label: "ARS - Argentine Peso" },
-  { value: "EUR", label: "EUR - Euro" },
-  { value: "GBP", label: "GBP - British Pound" },
-  { value: "BRL", label: "BRL - Brazilian Real" },
-  { value: "UYU", label: "UYU - Uruguayan Peso" },
-];
+const CURRENCY_OPTIONS: CurrencyCode[] = ["USD", "ARS", "EUR", "GBP", "BRL", "UYU"];
 
 type EditableInvoice = {
   id: string;
@@ -59,7 +53,7 @@ function toText(value: number | string | null) {
 
 function normalizeCurrency(value: string | null | undefined): CurrencyCode {
   const normalized = (value ?? "").toUpperCase();
-  const valid = new Set(CURRENCY_OPTIONS.map((option) => option.value));
+  const valid = new Set(CURRENCY_OPTIONS);
   return valid.has(normalized as CurrencyCode) ? (normalized as CurrencyCode) : "USD";
 }
 
@@ -75,6 +69,7 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { userRole } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -82,7 +77,7 @@ export default function InvoiceDetailPage() {
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
   const [customLabels, setCustomLabels] = useState({ custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3" });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [uploaderName, setUploaderName] = useState<string>("Unknown user");
+  const [uploaderName, setUploaderName] = useState<string>("-");
   const [signedFileUrl, setSignedFileUrl] = useState<string | null>(null);
   const [filePreviewError, setFilePreviewError] = useState(false);
 
@@ -91,9 +86,9 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     if (search.get("created") === "1") {
-      setToast("Invoice saved successfully.");
+      setToast(t("invoices.savedSuccess"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const load = async () => {
@@ -142,7 +137,7 @@ export default function InvoiceDetailPage() {
 
         if (uploaderRow) {
           const name = [uploaderRow.first_name, uploaderRow.last_name].filter(Boolean).join(" ");
-          setUploaderName(name || uploaderRow.email || "Unknown user");
+          setUploaderName(name || uploaderRow.email || t("common.unknown"));
         }
       }
 
@@ -215,11 +210,11 @@ export default function InvoiceDetailPage() {
       .eq("id", invoice.id);
 
     if (error) {
-      setToast("Failed to update invoice.");
+      setToast(t("invoices.failedUpdateInvoice"));
       return;
     }
 
-    setToast("Invoice updated successfully.");
+    setToast(t("invoices.updatedSuccess"));
   };
 
   const deleteInvoice = async () => {
@@ -234,7 +229,7 @@ export default function InvoiceDetailPage() {
     if (column === "invoiceNumber") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Invoice #</label>
+          <label className="text-sm text-snap-textDim">{t("common.invoiceNumber")}</label>
           <input
             value={invoice.invoiceNumber}
             onChange={(event) => updateField("invoiceNumber", event.target.value)}
@@ -246,7 +241,7 @@ export default function InvoiceDetailPage() {
     if (column === "vendor") {
       return (
         <div key={column} className="col-span-2 space-y-2">
-          <label className="text-sm text-snap-textDim">Vendor</label>
+          <label className="text-sm text-snap-textDim">{t("common.vendor")}</label>
           <input
             value={invoice.vendor}
             onChange={(event) => updateField("vendor", event.target.value)}
@@ -258,7 +253,7 @@ export default function InvoiceDetailPage() {
     if (column === "invoiceDate") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Invoice Date</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.invoiceDate")}</label>
           <input
             type="date"
             value={invoice.invoiceDate}
@@ -271,7 +266,7 @@ export default function InvoiceDetailPage() {
     if (column === "dueDate") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Due Date</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.dueDate")}</label>
           <input
             type="date"
             value={invoice.dueDate}
@@ -284,7 +279,7 @@ export default function InvoiceDetailPage() {
     if (column === "amount") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Amount (excl. tax)</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.amountExclTax")}</label>
           <input
             type="number"
             step="0.01"
@@ -298,7 +293,7 @@ export default function InvoiceDetailPage() {
     if (column === "tax") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Tax</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.tax")}</label>
           <input
             type="number"
             step="0.01"
@@ -312,7 +307,7 @@ export default function InvoiceDetailPage() {
     if (column === "totalAmount") {
       return (
         <div key={column} className="space-y-2">
-          <label className="text-sm text-snap-textDim">Total Amount</label>
+          <label className="text-sm text-snap-textDim">{t("invoices.totalAmount")}</label>
           <input
             type="number"
             step="0.01"
@@ -326,7 +321,7 @@ export default function InvoiceDetailPage() {
     if (column === "notes") {
       return (
         <div key={column} className="col-span-2 space-y-2">
-          <label className="text-sm text-snap-textDim">Notes</label>
+          <label className="text-sm text-snap-textDim">{t("common.notes")}</label>
           <textarea
             rows={3}
             value={invoice.notes}
@@ -352,9 +347,9 @@ export default function InvoiceDetailPage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Invoice Detail">
+    <DashboardLayout pageTitle={t("invoices.invoiceDetail")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <PageHeader title="Invoice Detail" description="Review and update invoice data." />
+        <PageHeader title={t("invoices.invoiceDetail")} description={t("invoices.reviewUpdate")} />
 
         {toast ? (
           <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
@@ -364,25 +359,25 @@ export default function InvoiceDetailPage() {
 
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading invoice...
+            {t("invoices.loadingInvoice")}
           </div>
         ) : null}
 
         {!loading && !invoice ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Invoice not found.
+            {t("invoices.notFound")}
           </div>
         ) : null}
 
         {!loading && invoice ? (
           <section className="grid gap-6 lg:grid-cols-[1.1fr_1.3fr]">
             <article className="space-y-4 rounded-xl border border-snap-border bg-snap-surface p-5">
-              <h2 className="text-base font-semibold text-snap-textMain">Original File</h2>
+              <h2 className="text-base font-semibold text-snap-textMain">{t("invoices.originalFile")}</h2>
               {signedFileUrl && !filePreviewError ? (
                 <div className="space-y-3">
                   {getFileExtension(invoice.originalFileUrl) === "pdf" ? (
                     <iframe
-                      title="Invoice file"
+                      title={t("invoices.invoiceFile")}
                       src={signedFileUrl}
                       onError={() => setFilePreviewError(true)}
                       className="h-80 w-full rounded border border-snap-border"
@@ -392,13 +387,13 @@ export default function InvoiceDetailPage() {
                       getFileExtension(invoice.originalFileUrl) === "png" ? (
                     <img
                       src={signedFileUrl}
-                      alt="Invoice file"
+                      alt={t("invoices.invoiceFile")}
                       onError={() => setFilePreviewError(true)}
                       className="max-h-80 w-full rounded border border-snap-border object-contain"
                     />
                   ) : (
                     <div className="rounded-md border border-dashed border-snap-border bg-snap-bg p-8 text-sm text-snap-textDim">
-                      Preview not available
+                      {t("invoices.previewNotAvailable")}
                     </div>
                   )}
                   <a
@@ -407,12 +402,12 @@ export default function InvoiceDetailPage() {
                     rel="noreferrer"
                     className="inline-block text-sm text-snap-textMain underline"
                   >
-                    Download file
+                    {t("invoices.downloadFile")}
                   </a>
                 </div>
               ) : (
                 <div className="rounded-md border border-dashed border-snap-border bg-snap-bg p-8 text-sm text-snap-textDim">
-                  Preview not available
+                  {t("invoices.previewNotAvailable")}
                 </div>
               )}
             </article>
@@ -422,28 +417,28 @@ export default function InvoiceDetailPage() {
                 {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => renderField(column))}
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Currency</label>
+                  <label className="text-sm text-snap-textDim">{t("invoices.currency")}</label>
                   <select
                     value={invoice.currency}
                     onChange={(event) => updateField("currency", event.target.value as CurrencyCode)}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
                     {CURRENCY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                      <option key={option} value={option}>
+                        {t(`invoices.currencyOptions.${option}`)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Category</label>
+                  <label className="text-sm text-snap-textDim">{t("categories.title")}</label>
                   <select
                     value={invoice.categoryId}
                     onChange={(event) => updateField("categoryId", event.target.value)}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="">Select category</option>
+                    <option value="">{t("invoices.selectCategory")}</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
@@ -453,21 +448,24 @@ export default function InvoiceDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">Status</label>
+                  <label className="text-sm text-snap-textDim">{t("common.status")}</label>
                   <select
                     value={invoice.status}
                     onChange={(event) => updateField("status", event.target.value as "paid" | "unpaid")}
                     className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
                   >
-                    <option value="paid">Paid</option>
-                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">{t("status.paid")}</option>
+                    <option value="unpaid">{t("status.unpaid")}</option>
                   </select>
                 </div>
               </div>
 
               <p className="border-t border-snap-border pt-4 text-xs text-snap-textDim">
-                Uploaded on {formatDateTime(invoice.uploadedAt)} by {uploaderName} · Last edited{" "}
-                {formatDateTime(invoice.lastEditedAt)}
+                {t("invoices.uploadedOnBy", {
+                  uploadedAt: formatDateTime(invoice.uploadedAt),
+                  uploaderName,
+                  lastEditedAt: formatDateTime(invoice.lastEditedAt),
+                })}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -476,7 +474,7 @@ export default function InvoiceDetailPage() {
                   onClick={() => void saveChanges()}
                   className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain"
                 >
-                  Save Changes
+                  {t("users.saveChanges")}
                 </button>
                 {canDelete ? (
                   <button
@@ -484,7 +482,7 @@ export default function InvoiceDetailPage() {
                     onClick={() => setDeleteOpen(true)}
                     className="rounded-md border border-snap-border px-4 py-2 text-sm text-red-400"
                   >
-                    Delete Invoice
+                    {t("invoices.deleteInvoiceTitle")}
                   </button>
                 ) : null}
               </div>
@@ -495,9 +493,9 @@ export default function InvoiceDetailPage() {
 
       <ConfirmModal
         open={deleteOpen}
-        title="Delete Invoice"
-        description="This action cannot be undone."
-        confirmLabel="Delete Invoice"
+        title={t("invoices.deleteInvoiceTitle")}
+        description={t("common.cannotBeUndone")}
+        confirmLabel={t("invoices.deleteInvoiceTitle")}
         destructive
         onCancel={() => setDeleteOpen(false)}
         onConfirm={() => void deleteInvoice()}

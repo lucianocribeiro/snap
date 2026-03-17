@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type TabKey = "overview" | "invoices" | "dashboard" | "reports";
 
@@ -47,6 +48,7 @@ export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const supabase = useMemo(() => createClient(), []);
   const { userRole } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,9 +60,9 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
-    if (search.get("created") === "1") setToast("Project created successfully.");
-    if (search.get("updated") === "1") setToast("Project updated successfully.");
-  }, []);
+    if (search.get("created") === "1") setToast(t("projects.createdSuccess"));
+    if (search.get("updated") === "1") setToast(t("projects.updatedSuccess"));
+  }, [t]);
 
   useEffect(() => {
     const load = async () => {
@@ -133,19 +135,19 @@ export default function ProjectDetailPage() {
   }, [params.id, supabase]);
 
   const projectMetrics = [
-    { label: "Invoices", value: String(invoices.length), helperText: "Total project invoices" },
+    { label: t("projects.invoices"), value: String(invoices.length), helperText: t("projects.totalProjectInvoices") },
     {
-      label: "Total Amount",
+      label: t("invoices.total"),
       value: new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(
         invoices.reduce((sum, invoice) => sum + (invoice.totalAmount ?? 0), 0),
       ),
-      helperText: "Current imported total",
+      helperText: t("projects.currentImportedTotal"),
     },
-    { label: "Categories", value: String(project?.categories.length ?? 0), helperText: "Active categories" },
+    { label: t("categories.title"), value: String(project?.categories.length ?? 0), helperText: t("projects.activeCategories") },
     {
-      label: "Columns",
+      label: t("projects.columns"),
       value: String(project?.selectedColumns.length ?? 0),
-      helperText: "Tracked fields",
+      helperText: t("projects.trackedFields"),
     },
   ];
 
@@ -157,7 +159,7 @@ export default function ProjectDetailPage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Project Detail">
+    <DashboardLayout pageTitle={t("projects.projectDetail")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         {toast ? (
           <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
@@ -166,8 +168,8 @@ export default function ProjectDetailPage() {
         ) : null}
 
         <PageHeader
-          title={project?.name ?? "Project"}
-          description={project?.description || "Project details and configuration"}
+          title={project?.name ?? t("common.project")}
+          description={project?.description || t("projects.detailsAndConfiguration")}
           action={
             canManage && project ? (
               <div className="flex items-center gap-2">
@@ -175,14 +177,14 @@ export default function ProjectDetailPage() {
                   href={`/projects/${project.id}/edit`}
                   className="rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textMain hover:bg-snap-bg"
                 >
-                  Edit
+                  {t("common.edit")}
                 </Link>
                 <button
                   type="button"
                   onClick={() => setArchiveOpen(true)}
                   className="rounded-md border border-snap-border px-3 py-2 text-sm text-amber-300 hover:bg-snap-bg"
                 >
-                  Archive
+                  {t("projects.archive")}
                 </button>
               </div>
             ) : null
@@ -191,10 +193,10 @@ export default function ProjectDetailPage() {
 
         <div className="flex flex-wrap gap-2">
           {([
-            ["overview", "Overview"],
-            ["invoices", "Invoices"],
-            ["dashboard", "Dashboard"],
-            ["reports", "Reports"],
+            ["overview", t("projects.overview")],
+            ["invoices", t("nav.invoices")],
+            ["dashboard", t("nav.dashboard")],
+            ["reports", t("nav.reports")],
           ] as Array<[TabKey, string]>).map(([key, label]) => (
             <button
               key={key}
@@ -214,24 +216,24 @@ export default function ProjectDetailPage() {
 
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading project...
+            {t("projects.loadingProject")}
           </div>
         ) : null}
 
         {!loading && !project ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Project not found.
+            {t("projects.notFound")}
           </div>
         ) : null}
 
         {!loading && project && activeTab === "overview" ? (
           <section className="grid gap-4 md:grid-cols-2">
             <article className="rounded-lg border border-snap-border bg-snap-surface p-5">
-              <p className="text-xs uppercase tracking-wide text-snap-textDim">Status</p>
+              <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("common.status")}</p>
               <div className="mt-2">
                 <StatusBadge status={project.status} variant="project" />
               </div>
-              <p className="mt-4 text-sm text-snap-textDim">Period type: {project.periodType}</p>
+              <p className="mt-4 text-sm text-snap-textDim">{t("projects.periodType")}: {project.periodType}</p>
               {project.periodType === "Custom" && project.customPeriods.length > 0 ? (
                 <ul className="mt-3 space-y-2 text-sm text-snap-textDim">
                   {project.customPeriods.map((period) => (
@@ -244,7 +246,7 @@ export default function ProjectDetailPage() {
             </article>
 
             <article className="rounded-lg border border-snap-border bg-snap-surface p-5">
-              <p className="text-xs uppercase tracking-wide text-snap-textDim">Selected Columns</p>
+              <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("projects.selectedColumns")}</p>
               <ul className="mt-2 space-y-1 text-sm text-snap-textMain">
                 {project.selectedColumns.map((column) => (
                   <li key={column}>
@@ -257,7 +259,7 @@ export default function ProjectDetailPage() {
             </article>
 
             <article className="rounded-lg border border-snap-border bg-snap-surface p-5 md:col-span-2">
-              <p className="text-xs uppercase tracking-wide text-snap-textDim">Categories</p>
+              <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("categories.title")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {project.categories.map((category) => (
                   <span
@@ -279,7 +281,7 @@ export default function ProjectDetailPage() {
                 href={`/invoices/new?projectId=${project.id}`}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain"
               >
-                + Add Invoice
+                {t("invoices.addInvoiceWithPlus")}
               </Link>
             </div>
             <InvoicesTable invoices={invoices} showProjectColumn={false} />
@@ -298,9 +300,9 @@ export default function ProjectDetailPage() {
 
       <ConfirmModal
         open={archiveOpen}
-        title="Archive Project"
-        description="This project will no longer appear as active."
-        confirmLabel="Archive"
+        title={t("projects.archiveProjectTitle")}
+        description={t("projects.archiveProjectDetailDescription")}
+        confirmLabel={t("projects.archive")}
         destructive
         onCancel={() => setArchiveOpen(false)}
         onConfirm={() => void archiveProject()}

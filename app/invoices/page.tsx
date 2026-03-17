@@ -9,6 +9,7 @@ import { FilterBar, type FilterConfig } from "@/components/shared/FilterBar";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type InvoiceRecord = {
   id: string;
@@ -42,6 +43,7 @@ export default function InvoicesPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { userRole } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<NamedEntity[]>([]);
   const [categories, setCategories] = useState<NamedEntity[]>([]);
@@ -101,31 +103,31 @@ export default function InvoicesPage() {
   const filterConfigs: FilterConfig[] = [
     {
       key: "projectId",
-      label: "Project",
+      label: t("common.project"),
       value: filters.projectId,
-      options: [{ label: "All Projects", value: "all" }, ...projects.map((project) => ({ label: project.name, value: project.id }))],
+      options: [{ label: t("dashboard.charts.allProjects"), value: "all" }, ...projects.map((project) => ({ label: project.name, value: project.id }))],
     },
     {
       key: "status",
-      label: "Status",
+      label: t("common.status"),
       value: filters.status,
       options: [
-        { label: "All", value: "all" },
-        { label: "Paid", value: "paid" },
-        { label: "Unpaid", value: "unpaid" },
+        { label: t("projects.statusAll"), value: "all" },
+        { label: t("status.paid"), value: "paid" },
+        { label: t("status.unpaid"), value: "unpaid" },
       ],
     },
     {
       key: "categoryId",
-      label: "Category",
+      label: t("categories.title"),
       value: filters.categoryId,
       options: [
-        { label: "All Categories", value: "all" },
+        { label: t("categories.allCategories"), value: "all" },
         ...categories.map((category) => ({ label: category.name, value: category.id })),
       ],
     },
-    { key: "dateFrom", label: "Date From", value: filters.dateFrom, type: "date" },
-    { key: "dateTo", label: "Date To", value: filters.dateTo, type: "date" },
+    { key: "dateFrom", label: t("common.dateFrom"), value: filters.dateFrom, type: "date" },
+    { key: "dateTo", label: t("common.dateTo"), value: filters.dateTo, type: "date" },
   ];
 
   const filteredInvoices = invoices.filter((invoice) => {
@@ -157,17 +159,17 @@ export default function InvoicesPage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Invoices">
+    <DashboardLayout pageTitle={t("invoices.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <PageHeader
-          title="Invoices"
+          title={t("invoices.title")}
           action={
             <button
               type="button"
               onClick={() => router.push("/invoices/new")}
               className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
-            >
-              + Add Invoice
+              >
+              {t("invoices.addInvoiceWithPlus")}
             </button>
           }
         />
@@ -179,7 +181,7 @@ export default function InvoicesPage() {
 
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading invoices...
+            {t("invoices.loadingInvoices")}
           </div>
         ) : (
           <InvoicesTable
@@ -192,9 +194,9 @@ export default function InvoicesPage() {
 
       <ConfirmModal
         open={Boolean(invoiceToDelete)}
-        title="Delete Invoice"
-        description="This action cannot be undone."
-        confirmLabel="Delete Invoice"
+        title={t("invoices.deleteInvoiceTitle")}
+        description={t("common.cannotBeUndone")}
+        confirmLabel={t("invoices.deleteInvoiceTitle")}
         destructive
         onCancel={() => setInvoiceToDelete(null)}
         onConfirm={() => void deleteInvoice()}

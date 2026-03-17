@@ -7,6 +7,7 @@ import type { ProjectColumn, ProjectFormState } from "@/components/dashboard/typ
 import { ProjectForm } from "@/components/projects/ProjectForm";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function defaultState(): ProjectFormState {
   return {
@@ -23,6 +24,7 @@ function defaultState(): ProjectFormState {
 export default function EditProjectPage() {
   const params = useParams<{ id: string }>();
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [formState, setFormState] = useState<ProjectFormState>(defaultState());
   const [invoicesCount, setInvoicesCount] = useState(0);
@@ -83,12 +85,12 @@ export default function EditProjectPage() {
   }, [params.id, supabase]);
 
   return (
-    <DashboardLayout pageTitle="Edit Project">
+    <DashboardLayout pageTitle={t("projects.editProject")}>
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <PageHeader title="Edit Project" description="Update project setup and configuration." />
+        <PageHeader title={t("projects.editProject")} description={t("projects.editProjectDescription")} />
         {loading ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading project...
+            {t("projects.loadingProject")}
           </div>
         ) : (
           <ProjectForm

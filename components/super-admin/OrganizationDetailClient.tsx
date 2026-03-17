@@ -7,6 +7,7 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/lib/context/AuthContext";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type OrganizationDetailClientProps = {
   organization: OrganizationListItem;
@@ -26,6 +27,7 @@ function formatDate(value: string) {
 export function OrganizationDetailClient({ organization }: OrganizationDetailClientProps) {
   const router = useRouter();
   const { organizationId } = useAuth();
+  const { t } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -41,9 +43,9 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("updated") === "1") {
-      setToast("Organization updated.");
+      setToast(t("settings.organizationUpdated"));
     }
-  }, []);
+  }, [t]);
 
   const toggleStatus = async () => {
     const nextStatus = organization.status === "active" ? "inactive" : "active";
@@ -58,14 +60,14 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setToast(result.error ?? "Failed to update organization.");
+      setToast(result.error ?? t("superAdmin.failedUpdateOrganization"));
       setSubmitting(false);
       return;
     }
 
     setSubmitting(false);
     setConfirmOpen(false);
-    setToast(nextStatus === "active" ? "Organization activated." : "Organization deactivated.");
+    setToast(nextStatus === "active" ? t("superAdmin.organizationActivated") : t("superAdmin.organizationDeactivated"));
     router.refresh();
   };
 
@@ -79,7 +81,7 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setToast(result.error ?? "Failed to delete organization.");
+      setToast(result.error ?? t("superAdmin.failedDeleteOrganization"));
       setDeleteSubmitting(false);
       return;
     }
@@ -102,29 +104,29 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
           <h2 className="text-xl font-semibold text-snap-textMain">{organization.name}</h2>
           <StatusBadge
             variant="org"
-            status={organization.status === "active" ? "Active" : "Inactive"}
+            status={organization.status === "active" ? t("status.active") : t("status.inactive")}
           />
         </div>
 
         <dl className="mt-5 grid gap-4 md:grid-cols-2">
           <div>
-            <dt className="text-xs uppercase tracking-wide text-snap-textDim">Admin name</dt>
+            <dt className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.adminName")}</dt>
             <dd className="mt-1 text-sm text-snap-textMain">{organization.adminName}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-snap-textDim">Admin email</dt>
+            <dt className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.adminEmail")}</dt>
             <dd className="mt-1 text-sm text-snap-textMain">{organization.adminEmail}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-snap-textDim">Date created</dt>
+            <dt className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.dateCreated")}</dt>
             <dd className="mt-1 text-sm text-snap-textMain">{formatDate(organization.createdAt)}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-snap-textDim">Users count</dt>
+            <dt className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.usersCount")}</dt>
             <dd className="mt-1 text-sm text-snap-textMain">{organization.usersCount}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-snap-textDim">Project count</dt>
+            <dt className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.projectsCount")}</dt>
             <dd className="mt-1 text-sm text-snap-textMain">{organization.projectsCount}</dd>
           </div>
         </dl>
@@ -134,14 +136,14 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
             href={`/super-admin/organizations/${organization.id}/edit`}
             className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
           >
-            Edit
+            {t("common.edit")}
           </Link>
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
             className="rounded-md border border-snap-border bg-transparent px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
           >
-            {organization.status === "active" ? "Deactivate" : "Activate"}
+            {organization.status === "active" ? t("users.deactivate") : t("users.activate")}
           </button>
           <button
             type="button"
@@ -149,20 +151,20 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
             onClick={() => setDeleteConfirmOpen(true)}
             className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       </div>
 
       <ConfirmModal
         open={confirmOpen}
-        title={`${organization.status === "active" ? "Deactivate" : "Activate"} Organization`}
+        title={`${organization.status === "active" ? t("users.deactivate") : t("users.activate")} ${t("common.organization")}`}
         description={
           organization.status === "active"
-            ? "This organization will be marked inactive."
-            : "This organization will be marked active."
+            ? t("superAdmin.markedInactive")
+            : t("superAdmin.markedActive")
         }
-        confirmLabel={submitting ? "Saving..." : organization.status === "active" ? "Deactivate" : "Activate"}
+        confirmLabel={submitting ? t("settings.saving") : organization.status === "active" ? t("users.deactivate") : t("users.activate")}
         destructive={organization.status === "active"}
         onCancel={() => (submitting ? null : setConfirmOpen(false))}
         onConfirm={() => void toggleStatus()}
@@ -170,9 +172,9 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        title="Delete Organization"
-        description={`This will permanently delete [${organization.name}] and all associated data including users, projects, invoices, and categories. This cannot be undone.`}
-        confirmLabel={deleteSubmitting ? "Deleting..." : "Delete"}
+        title={t("superAdmin.deleteOrganization")}
+        description={t("superAdmin.deleteOrganizationDescription", { name: organization.name })}
+        confirmLabel={deleteSubmitting ? t("superAdmin.deleting") : t("common.delete")}
         destructive
         onCancel={() => (deleteSubmitting ? null : setDeleteConfirmOpen(false))}
         onConfirm={() => void deleteOrganization()}

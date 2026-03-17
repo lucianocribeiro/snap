@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { createClient } from "@/lib/supabase/client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type LoginErrors = {
   email?: string;
@@ -14,26 +15,26 @@ type LoginErrors = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validateEmail(value: string) {
-  if (!value.trim()) return "Email is required.";
-  if (!emailPattern.test(value)) return "Enter a valid email address.";
+function validateEmail(value: string, t: (key: string) => string) {
+  if (!value.trim()) return t("auth.errors.emailRequired");
+  if (!emailPattern.test(value)) return t("auth.errors.emailInvalid");
   return "";
 }
 
-function validatePassword(value: string) {
-  if (!value) return "Password is required.";
-  if (value.length < 8) return "Password must be at least 8 characters.";
+function validatePassword(value: string, t: (key: string) => string) {
+  if (!value) return t("auth.errors.passwordRequired");
+  if (value.length < 8) return t("auth.errors.passwordMinLength");
   return "";
 }
 
 export default function LoginPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [language, setLanguage] = useState<"EN" | "ES">("EN");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState<{ email: boolean; password: boolean }>({
@@ -43,18 +44,18 @@ export default function LoginPage() {
 
   const errors: LoginErrors = useMemo(
     () => ({
-      email: validateEmail(email),
-      password: validatePassword(password),
+      email: validateEmail(email, t),
+      password: validatePassword(password, t),
     }),
-    [email, password],
+    [email, password, t],
   );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reset") === "success") {
-      setToastMessage("Password updated successfully. Please sign in.");
+      setToastMessage(t("auth.passwordUpdated"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -74,7 +75,7 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data.user) {
-      setToastMessage("Invalid email or password.");
+      setToastMessage(t("auth.invalidCredentials"));
       setIsSubmitting(false);
       return;
     }
@@ -112,17 +113,17 @@ export default function LoginPage() {
           />
         </div>
         <AuthCard
-          title="Sign In"
-          description="Sign in to continue to your organization dashboard."
+          title={t("auth.signIn")}
+          description={t("auth.signInDescription")}
           footer={
             <div className="flex items-center justify-center gap-3">
-              <span className="text-sm text-snap-textDim">Language</span>
+              <span className="text-sm text-snap-textDim">{t("nav.language")}</span>
               <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
-                {(["EN", "ES"] as const).map((lang) => (
+                {(["en", "es"] as const).map((lang) => (
                   <button
                     key={lang}
                     type="button"
-                    onClick={() => setLanguage(lang)}
+                    onClick={() => void setLanguage(lang)}
                     className={[
                       "rounded px-3 py-1 text-sm",
                       language === lang
@@ -130,7 +131,7 @@ export default function LoginPage() {
                         : "text-snap-textDim hover:text-snap-textMain",
                     ].join(" ")}
                   >
-                    {lang}
+                    {lang.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -140,7 +141,7 @@ export default function LoginPage() {
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm text-snap-textDim">
-              Email
+              {t("auth.email")}
             </label>
             <input
               id="email"
@@ -157,7 +158,7 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm text-snap-textDim">
-              Password
+              {t("auth.password")}
             </label>
             <div className="flex items-center rounded-md border border-snap-border bg-snap-bg pr-2">
               <input
@@ -173,7 +174,7 @@ export default function LoginPage() {
                 onClick={() => setShowPassword((prev) => !prev)}
                 className="text-xs text-snap-textDim hover:text-snap-textMain"
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("auth.hide") : t("auth.show")}
               </button>
             </div>
             {touched.password && errors.password ? (
@@ -189,10 +190,10 @@ export default function LoginPage() {
                 onChange={(event) => setRememberMe(event.target.checked)}
                 className="h-4 w-4 rounded border border-snap-border bg-snap-bg"
               />
-              Remember me
+              {t("auth.rememberMe")}
             </label>
             <Link href="/forgot-password" className="text-sm text-snap-textMain underline">
-              Forgot your password?
+              {t("auth.forgotPassword")}
             </Link>
           </div>
 
@@ -201,7 +202,7 @@ export default function LoginPage() {
             disabled={isSubmitting}
             className="w-full rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg"
           >
-            {isSubmitting ? "Signing in..." : "Sign In"}
+            {isSubmitting ? t("auth.signingIn") : t("auth.signIn")}
           </button>
           </form>
         </AuthCard>

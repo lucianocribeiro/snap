@@ -8,6 +8,7 @@ import { DEFAULT_SELECTED_COLUMNS, PROJECT_COLUMN_LABELS } from "@/components/pr
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FilterBar, type FilterConfig } from "@/components/shared/FilterBar";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { createClient } from "@/lib/supabase/client";
 
 type ProjectOption = {
@@ -151,6 +152,7 @@ function generateWeeklyPeriods(createdAt: string): ProjectPeriod[] {
 
 export default function ReportsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { t } = useLanguage();
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -365,21 +367,21 @@ export default function ReportsPage() {
   const filterConfigs: FilterConfig[] = [
     {
       key: "projectId",
-      label: "Project",
+      label: t("common.project"),
       value: selectedProjectId,
       options: [
-        { label: "Select a project", value: "" },
+        { label: t("reports.selectProject"), value: "" },
         ...projects.map((project) => ({ label: project.name, value: project.id })),
       ],
     },
     {
       key: "status",
-      label: "Status",
+      label: t("common.status"),
       value: selectedStatus,
       options: [
-        { label: "All", value: "all" },
-        { label: "Paid", value: "paid" },
-        { label: "Unpaid", value: "unpaid" },
+        { label: t("projects.statusAll"), value: "all" },
+        { label: t("status.paid"), value: "paid" },
+        { label: t("status.unpaid"), value: "unpaid" },
       ],
     },
   ];
@@ -426,7 +428,7 @@ export default function ReportsPage() {
       case "category":
         return invoice.category_id ? categoryNameById.get(invoice.category_id) ?? "-" : "-";
       case "status":
-        return invoice.status === "paid" ? "Paid" : "Unpaid";
+        return invoice.status === "paid" ? t("status.paid") : t("status.unpaid");
       case "notes":
         return invoice.notes ?? "-";
       case "custom1":
@@ -476,7 +478,7 @@ export default function ReportsPage() {
             row[label] = invoice.category_id ? categoryNameById.get(invoice.category_id) ?? "" : "";
             break;
           case "status":
-            row[label] = invoice.status === "paid" ? "Paid" : "Unpaid";
+            row[label] = invoice.status === "paid" ? t("status.paid") : t("status.unpaid");
             break;
           case "notes":
             row[label] = invoice.notes ?? "";
@@ -496,7 +498,7 @@ export default function ReportsPage() {
       }
 
       if (includeCurrency) {
-        row.Currency = (invoice.currency ?? "USD").toUpperCase();
+        row[t("invoices.currency")] = (invoice.currency ?? "USD").toUpperCase();
       }
 
       return row;
@@ -504,16 +506,16 @@ export default function ReportsPage() {
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");
+    XLSX.utils.book_append_sheet(workbook, worksheet, t("invoices.title"));
 
     const fileName = `Snap_${sanitizeFileNamePart(selectedProject.name)}_Report_${getLocalIsoDate()}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
   return (
-    <DashboardLayout pageTitle="Reports">
+    <DashboardLayout pageTitle={t("reports.title")}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <PageHeader title="Reports" description="Build a client-side invoice report and export it to Excel." />
+        <PageHeader title={t("reports.title")} description={t("reports.description")} />
 
         <FilterBar
           filters={filterConfigs}
@@ -532,8 +534,8 @@ export default function ReportsPage() {
         <section className="grid gap-4 lg:grid-cols-2">
           {!selectedProjectId || periods.length > 0 ? (
             <article className="rounded-xl border border-snap-border bg-snap-surface p-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Period Selector</h2>
-              <p className="mt-1 text-sm text-snap-textDim">Select one or more project periods.</p>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">{t("reports.periodSelector")}</h2>
+              <p className="mt-1 text-sm text-snap-textDim">{t("reports.selectPeriodsDescription")}</p>
               <select
                 multiple
                 disabled={!selectedProjectId}
@@ -553,8 +555,8 @@ export default function ReportsPage() {
           ) : null}
 
           <article className="rounded-xl border border-snap-border bg-snap-surface p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Category Filter</h2>
-            <p className="mt-1 text-sm text-snap-textDim">Optional multi-select filter.</p>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">{t("reports.categoryFilter")}</h2>
+            <p className="mt-1 text-sm text-snap-textDim">{t("reports.optionalMultiSelectFilter")}</p>
             <select
               multiple
               disabled={!selectedProjectId}
@@ -574,9 +576,9 @@ export default function ReportsPage() {
         </section>
 
         <section className="rounded-xl border border-snap-border bg-snap-surface p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">Column Selector</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-snap-textDim">{t("reports.columnSelector")}</h2>
           <p className="mt-1 text-sm text-snap-textDim">
-            Defaults to the selected project configuration. All selected columns are checked.
+            {t("reports.columnSelectorDescription")}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
@@ -600,8 +602,8 @@ export default function ReportsPage() {
         <div className="flex items-center justify-between rounded-xl border border-snap-border bg-snap-surface px-4 py-3">
           <p className="text-sm text-snap-textDim">
             {selectedProjectId
-              ? `Previewing ${invoices.length} invoice${invoices.length === 1 ? "" : "s"}`
-              : "Select a project to start building your report."}
+              ? t("reports.previewingInvoices", { count: invoices.length })
+              : t("reports.selectProjectToStart")}
           </p>
           <button
             type="button"
@@ -609,23 +611,23 @@ export default function ReportsPage() {
             disabled={!selectedProjectId || invoices.length === 0 || selectedColumns.length === 0}
             className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain transition hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Export to Excel (.xlsx)
+            {t("reports.exportToExcel")}
           </button>
         </div>
 
         {!selectedProjectId ? (
           <EmptyState
-            title="Select a project to preview your report."
-            description="Choose a project and filters above to load invoice data."
+            title={t("reports.selectProjectPreviewTitle")}
+            description={t("reports.selectProjectPreviewDescription")}
           />
         ) : loadingProjects || loadingPreview ? (
           <div className="rounded-lg border border-snap-border bg-snap-surface p-6 text-sm text-snap-textDim">
-            Loading report preview...
+            {t("reports.loadingPreview")}
           </div>
         ) : invoices.length === 0 ? (
           <EmptyState
-            title="No invoices found"
-            description="No invoices match the selected filters for this project."
+            title={t("reports.noInvoicesFound")}
+            description={t("reports.noInvoicesForFilters")}
           />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-snap-border bg-snap-surface">

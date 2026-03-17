@@ -6,6 +6,7 @@ import { StepIndicator } from "@/components/shared/StepIndicator";
 import { CategoryRequestModal } from "@/components/shared/CategoryRequestModal";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import type { ProjectColumn, ProjectFormState } from "@/components/dashboard/types";
 import {
   DEFAULT_SELECTED_COLUMNS,
@@ -61,6 +62,7 @@ export function ProjectForm({
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { organizationId } = useAuth();
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -70,6 +72,14 @@ export function ProjectForm({
   const [requestCategoryName, setRequestCategoryName] = useState("");
   const [pendingCategoryRequests, setPendingCategoryRequests] = useState<PendingCategoryRequest[]>([]);
   const [formState, setFormState] = useState<ProjectFormState>(initialState ?? EMPTY_STATE);
+
+  const steps = [
+    t("projects.form.steps.basicInfo"),
+    t("projects.form.steps.period"),
+    t("projects.form.steps.columns"),
+    t("projects.form.steps.categories"),
+    t("projects.form.steps.review"),
+  ];
 
   const canContinueFromStep1 = formState.name.trim().length > 0;
   const canContinueFromStep3 = formState.selectedColumns.length > 0;
@@ -92,9 +102,28 @@ export function ProjectForm({
     return data?.organization_id ?? null;
   };
 
+  const getColumnLabel = (column: ProjectColumn) => {
+    if (column === "custom1" || column === "custom2" || column === "custom3") {
+      return formState.customColumnLabels[column] || PROJECT_COLUMN_LABELS[column];
+    }
+
+    if (column === "invoiceNumber") return t("common.invoiceNumber");
+    if (column === "vendor") return t("common.vendor");
+    if (column === "invoiceDate") return t("invoices.invoiceDate");
+    if (column === "dueDate") return t("invoices.dueDate");
+    if (column === "amount") return t("invoices.amountExclTax");
+    if (column === "tax") return t("invoices.tax");
+    if (column === "totalAmount") return t("invoices.totalAmount");
+    if (column === "category") return t("categories.title");
+    if (column === "status") return t("common.status");
+    if (column === "notes") return t("common.notes");
+
+    return PROJECT_COLUMN_LABELS[column];
+  };
+
   const sortedColumns = (Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).sort((a, b) => {
-    const labelA = PROJECT_COLUMN_LABELS[a];
-    const labelB = PROJECT_COLUMN_LABELS[b];
+    const labelA = getColumnLabel(a);
+    const labelB = getColumnLabel(b);
     return labelA.localeCompare(labelB);
   });
 
@@ -145,7 +174,7 @@ export function ProjectForm({
     note: string;
   }) => {
     if (formState.categories.includes(categoryName)) {
-      throw new Error("This category already exists in the project.");
+      throw new Error(t("projects.form.errors.categoryAlreadyExists"));
     }
 
     const {
@@ -153,17 +182,17 @@ export function ProjectForm({
     } = await supabase.auth.getUser();
 
     if (!user) {
-      throw new Error("Session expired. Please sign in again.");
+      throw new Error(t("settings.sessionExpired"));
     }
 
     const resolvedOrganizationId = await resolveOrganizationId(user.id);
     if (!resolvedOrganizationId) {
-      throw new Error("Could not resolve organization for this request.");
+      throw new Error(t("projects.form.errors.resolveOrganization"));
     }
 
     if (mode === "create" && !projectId) {
       setPendingCategoryRequests((previous) => [...previous, { categoryName, note }]);
-      setToast("Category request will be sent after the project is created.");
+      setToast(t("projects.form.categoryRequestQueued"));
       setRequestModalOpen(false);
       setCategoryInput("");
       return;
@@ -179,10 +208,10 @@ export function ProjectForm({
     });
 
     if (error) {
-      throw new Error("Failed to send request.");
+      throw new Error(t("categories.failedSendRequest"));
     }
 
-    setToast("Category request sent.");
+    setToast(t("projects.form.categoryRequestSent"));
     setRequestModalOpen(false);
     setCategoryInput("");
   };
@@ -237,7 +266,7 @@ export function ProjectForm({
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setToast("Session expired. Please sign in again.");
+      setToast(t("settings.sessionExpired"));
       setIsSaving(false);
       return;
     }
@@ -257,7 +286,7 @@ export function ProjectForm({
     if (mode === "create") {
       const { data, error } = await supabase.from("projects").insert(projectPayload).select("id").single();
       if (error || !data) {
-        setToast("Failed to create project.");
+        setToast(t("projects.form.errors.createProject"));
         setIsSaving(false);
         return;
       }
@@ -265,14 +294,14 @@ export function ProjectForm({
     } else if (projectId) {
       const { error } = await supabase.from("projects").update(projectPayload).eq("id", projectId);
       if (error) {
-        setToast("Failed to update project.");
+        setToast(t("projects.form.errors.updateProject"));
         setIsSaving(false);
         return;
       }
     }
 
     if (!targetProjectId) {
-      setToast("Missing project id.");
+      setToast(t("projects.form.errors.missingProjectId"));
       setIsSaving(false);
       return;
     }
@@ -291,7 +320,7 @@ export function ProjectForm({
       if (customRows.length > 0) {
         const { error } = await supabase.from("project_periods").insert(customRows);
         if (error) {
-          setToast("Project saved, but custom periods could not be updated.");
+          setToast(t("projects.form.errors.customPeriodsUpdate"));
           setIsSaving(false);
           return;
         }
@@ -308,7 +337,7 @@ export function ProjectForm({
     if (categoryRows.length > 0) {
       const { error } = await supabase.from("categories").insert(categoryRows);
       if (error) {
-        setToast("Project saved, but categories could not be updated.");
+        setToast(t("projects.form.errors.categoriesUpdate"));
         setIsSaving(false);
         return;
       }
@@ -326,7 +355,7 @@ export function ProjectForm({
 
       const { error } = await supabase.from("category_requests").insert(requestRows);
       if (error) {
-        setToast("Project saved, but category requests could not be sent.");
+        setToast(t("projects.form.errors.categoryRequestsSend"));
         setIsSaving(false);
         return;
       }
@@ -353,14 +382,14 @@ export function ProjectForm({
         </div>
       ) : null}
 
-      <StepIndicator steps={PROJECT_STEPS} currentStep={step} />
+      <StepIndicator steps={steps} currentStep={step} />
 
       <form onSubmit={onSubmit} className="rounded-xl border border-snap-border bg-snap-surface p-6 md:p-8">
         {step === 1 ? (
           <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-snap-textMain">Basic Information</h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("projects.form.basicInformation")}</h2>
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Project name *</label>
+              <label className="text-sm text-snap-textDim">{t("projects.form.projectNameRequired")}</label>
               <input
                 value={formState.name}
                 maxLength={80}
@@ -370,7 +399,7 @@ export function ProjectForm({
               <p className="text-xs text-snap-textDim">{formState.name.length} / 80</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-snap-textDim">Description</label>
+              <label className="text-sm text-snap-textDim">{t("common.description")}</label>
               <textarea
                 value={formState.description}
                 maxLength={300}
@@ -387,10 +416,10 @@ export function ProjectForm({
 
         {step === 2 ? (
           <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-snap-textMain">Period Configuration</h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("projects.form.periodConfiguration")}</h2>
             {periodTypeChangedWithInvoices ? (
               <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
-                Changing the period type may affect existing invoice groupings.
+                {t("projects.form.periodTypeWarning")}
               </p>
             ) : null}
             <div className="grid gap-4 md:grid-cols-3">
@@ -406,7 +435,7 @@ export function ProjectForm({
                       : "border-snap-border bg-snap-bg hover:bg-snap-card",
                   ].join(" ")}
                 >
-                  <p className="text-sm font-medium text-snap-textMain">{option}</p>
+                  <p className="text-sm font-medium text-snap-textMain">{t(`dashboard.charts.${option.toLowerCase()}`)}</p>
                 </button>
               ))}
             </div>
@@ -415,7 +444,7 @@ export function ProjectForm({
               <div className="space-y-4 rounded-lg border border-snap-border bg-snap-bg p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-snap-textDim">
-                    Custom periods ({formState.customPeriods.length} / 24)
+                    {t("projects.form.customPeriodsCount", { count: formState.customPeriods.length })}
                   </p>
                   <button
                     type="button"
@@ -423,7 +452,7 @@ export function ProjectForm({
                     disabled={formState.customPeriods.length >= 24}
                     className="rounded-md border border-snap-border px-3 py-1.5 text-sm text-snap-textMain disabled:opacity-50"
                   >
-                    + Add Period
+                    {t("projects.form.addPeriod")}
                   </button>
                 </div>
                 {formState.customPeriods.map((period) => (
@@ -431,7 +460,7 @@ export function ProjectForm({
                     <input
                       value={period.name}
                       onChange={(event) => updateCustomPeriod(period.id, "name", event.target.value)}
-                      placeholder="Period name"
+                      placeholder={t("projects.form.periodName")}
                       className="rounded-md border border-snap-border bg-snap-surface px-2 py-1.5 text-sm text-snap-textMain outline-none md:col-span-2"
                     />
                     <input
@@ -456,7 +485,7 @@ export function ProjectForm({
                         onClick={() => removeCustomPeriod(period.id)}
                         className="rounded-md border border-snap-border px-2 text-xs text-snap-textDim"
                       >
-                        Delete
+                        {t("common.delete")}
                       </button>
                     </div>
                   </div>
@@ -468,9 +497,7 @@ export function ProjectForm({
 
         {step === 3 ? (
           <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-snap-textMain">
-              Select the columns you want to track in this project
-            </h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("projects.form.selectColumns")}</h2>
             <div className="grid gap-3 md:grid-cols-2">
               {sortedColumns.map((column) => {
                 const checked = formState.selectedColumns.includes(column);
@@ -484,7 +511,7 @@ export function ProjectForm({
                         onChange={() => toggleColumn(column)}
                         className="h-4 w-4 rounded border border-snap-border bg-snap-surface"
                       />
-                      {PROJECT_COLUMN_LABELS[column]}
+                      {getColumnLabel(column)}
                     </label>
                     {checked && isCustom ? (
                       <input
@@ -511,13 +538,13 @@ export function ProjectForm({
 
         {step === 4 ? (
           <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-snap-textMain">Categories</h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("categories.title")}</h2>
             <p className="text-sm text-snap-textDim">{formState.categories.length} / {CATEGORY_LIMIT}</p>
             <div className="flex gap-2">
               <input
                 value={categoryInput}
                 onChange={(event) => setCategoryInput(event.target.value)}
-                placeholder="Add a category"
+                placeholder={t("projects.form.addCategoryPlaceholder")}
                 className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
               />
               <button
@@ -526,11 +553,11 @@ export function ProjectForm({
                 disabled={normalizeCategory(categoryInput).length === 0}
                 className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
               >
-                Add
+                {t("common.add")}
               </button>
             </div>
             {formState.categories.length >= CATEGORY_LIMIT ? (
-              <p className="text-sm text-snap-textDim">You have reached the 20-category limit for this project.</p>
+              <p className="text-sm text-snap-textDim">{t("categories.limitReached")}</p>
             ) : null}
             <div className="flex flex-wrap gap-2">
               {formState.categories.map((category) => (
@@ -548,6 +575,7 @@ export function ProjectForm({
                       }))
                     }
                     className="text-snap-textDim hover:text-snap-textMain"
+                    aria-label={t("common.delete")}
                   >
                     ×
                   </button>
@@ -559,29 +587,29 @@ export function ProjectForm({
 
         {step === 5 ? (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-snap-textMain">Review</h2>
+            <h2 className="text-lg font-semibold text-snap-textMain">{t("projects.form.review")}</h2>
             <div className="grid gap-3 md:grid-cols-2">
               <article className="rounded-md border border-snap-border bg-snap-bg p-4">
-                <p className="text-xs uppercase tracking-wide text-snap-textDim">Basic Info</p>
+                <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("projects.form.basicInfo")}</p>
                 <p className="mt-2 text-sm text-snap-textMain">{formState.name}</p>
-                <p className="mt-1 text-sm text-snap-textDim">{formState.description || "No description"}</p>
+                <p className="mt-1 text-sm text-snap-textDim">{formState.description || t("projects.form.noDescription")}</p>
               </article>
               <article className="rounded-md border border-snap-border bg-snap-bg p-4">
-                <p className="text-xs uppercase tracking-wide text-snap-textDim">Period</p>
-                <p className="mt-2 text-sm text-snap-textMain">{formState.periodType}</p>
+                <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("projects.form.period")}</p>
+                <p className="mt-2 text-sm text-snap-textMain">{t(`dashboard.charts.${formState.periodType.toLowerCase()}`)}</p>
                 {formState.periodType === "Custom" ? (
                   <p className="mt-1 text-sm text-snap-textDim">
-                    {formState.customPeriods.length} custom periods
+                    {t("projects.form.customPeriodsSelected", { count: formState.customPeriods.length })}
                   </p>
                 ) : null}
               </article>
               <article className="rounded-md border border-snap-border bg-snap-bg p-4">
-                <p className="text-xs uppercase tracking-wide text-snap-textDim">Columns</p>
-                <p className="mt-2 text-sm text-snap-textMain">{formState.selectedColumns.length} selected</p>
+                <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("projects.form.columns")}</p>
+                <p className="mt-2 text-sm text-snap-textMain">{t("projects.form.columnsSelected", { count: formState.selectedColumns.length })}</p>
               </article>
               <article className="rounded-md border border-snap-border bg-snap-bg p-4">
-                <p className="text-xs uppercase tracking-wide text-snap-textDim">Categories</p>
-                <p className="mt-2 text-sm text-snap-textMain">{formState.categories.length} added</p>
+                <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("categories.title")}</p>
+                <p className="mt-2 text-sm text-snap-textMain">{t("projects.form.categoriesAdded", { count: formState.categories.length })}</p>
               </article>
             </div>
           </div>
@@ -594,7 +622,7 @@ export function ProjectForm({
             disabled={step === 1 || isSaving}
             className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain disabled:opacity-50"
           >
-            Back
+            {t("common.back")}
           </button>
           <button
             type="submit"
@@ -606,7 +634,13 @@ export function ProjectForm({
             }
             className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain disabled:opacity-50"
           >
-            {step === 5 ? (isSaving ? "Saving..." : mode === "create" ? "Create Project" : "Save Project") : "Next"}
+            {step === 5
+              ? isSaving
+                ? t("settings.saving")
+                : mode === "create"
+                  ? t("projects.form.createProject")
+                  : t("projects.form.saveProject")
+              : t("common.next")}
           </button>
         </div>
       </form>

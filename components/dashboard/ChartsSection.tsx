@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function ChartCard({
   title,
@@ -105,11 +106,17 @@ function SpendByPeriodChart({ points }: { points: Array<{ label: string; value: 
   );
 }
 
-function SpendByCategoryChart({ points }: { points: Array<{ label: string; value: number }> }) {
+function SpendByCategoryChart({
+  points,
+  emptyLabel,
+}: {
+  points: Array<{ label: string; value: number }>;
+  emptyLabel: string;
+}) {
   const total = points.reduce((sum, point) => sum + point.value, 0);
 
   if (total <= 0) {
-    return <p className="text-sm text-snap-textDim">No categorized spend yet.</p>;
+    return <p className="text-sm text-snap-textDim">{emptyLabel}</p>;
   }
 
   return (
@@ -145,25 +152,32 @@ export function ChartsSection({
   spendByPeriod = [],
   spendByCategory = [],
 }: ChartsSectionProps) {
+  const { t } = useLanguage();
+
   return (
     <section className="rounded-2xl border border-snap-border bg-snap-card p-8">
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
         <ChartCard
-          title="Total Spend by Period"
+          title={t("dashboard.charts.spendByPeriod")}
           subtitle={
             projectId
-              ? `Analyze spending trends for project ${projectId}.`
-              : "Analyze spending trends over time and compare by project."
+              ? t("dashboard.charts.spendByPeriodSubtitleProject", { projectId })
+              : t("dashboard.charts.spendByPeriodSubtitleAll")
           }
           filters={
             <>
               <FilterSelect
-                label="Project"
-                options={["All projects"]}
+                label={t("dashboard.charts.projectFilter")}
+                options={[t("dashboard.charts.allProjects")]}
               />
               <FilterSelect
-                label="Period"
-                options={["Monthly", "Weekly", "Quarterly", "Yearly"]}
+                label={t("dashboard.charts.periodFilter")}
+                options={[
+                  t("dashboard.charts.monthly"),
+                  t("dashboard.charts.weekly"),
+                  t("dashboard.charts.quarterly"),
+                  t("dashboard.charts.yearly"),
+                ]}
               />
             </>
           }
@@ -172,8 +186,8 @@ export function ChartsSection({
               <ChartSkeleton />
             ) : !hasInvoices ? (
               <EmptyState
-                title="No invoices yet"
-                description="Upload your first invoice to see spend trends by month."
+                title={t("dashboard.charts.noInvoicesTitle")}
+                description={t("dashboard.charts.noInvoicesTrendDescription")}
               />
             ) : (
               <SpendByPeriodChart points={spendByPeriod} />
@@ -182,16 +196,16 @@ export function ChartsSection({
         />
 
         <ChartCard
-          title="Spend by Category"
+          title={t("dashboard.charts.spendByCategory")}
           subtitle={
             projectId
-              ? "Track category allocation for this project."
-              : "Track allocation by vendor category and expense type."
+              ? t("dashboard.charts.spendByCategorySubtitleProject")
+              : t("dashboard.charts.spendByCategorySubtitleAll")
           }
           filters={
             <FilterSelect
-              label="Project"
-              options={["All projects"]}
+              label={t("dashboard.charts.projectFilter")}
+              options={[t("dashboard.charts.allProjects")]}
             />
           }
           content={
@@ -199,11 +213,14 @@ export function ChartsSection({
               <ChartSkeleton />
             ) : !hasInvoices ? (
               <EmptyState
-                title="No invoices yet"
-                description="Category allocation appears after invoices start coming in."
+                title={t("dashboard.charts.noInvoicesTitle")}
+                description={t("dashboard.charts.noInvoicesCategoryDescription")}
               />
             ) : (
-              <SpendByCategoryChart points={spendByCategory} />
+              <SpendByCategoryChart
+                points={spendByCategory}
+                emptyLabel={t("dashboard.charts.noCategorizedSpend")}
+              />
             )
           }
         />

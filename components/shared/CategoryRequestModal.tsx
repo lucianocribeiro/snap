@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type CategoryRequestModalProps = {
   open: boolean;
@@ -15,6 +16,7 @@ export function CategoryRequestModal({
   onClose,
   onSubmit,
 }: CategoryRequestModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState(categoryName);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function CategoryRequestModal({
 
     const normalizedName = name.trim().replace(/\s+/g, " ");
     if (!normalizedName) {
-      setError("Category name is required.");
+      setError(t("categories.categoryNameRequired"));
       return;
     }
 
@@ -45,7 +47,7 @@ export function CategoryRequestModal({
       await onSubmit({ categoryName: normalizedName, note: note.trim() });
       setSubmitting(false);
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Failed to send request.";
+      const message = submitError instanceof Error ? submitError.message : t("categories.failedSendRequest");
       setError(message);
       setSubmitting(false);
     }
@@ -55,15 +57,15 @@ export function CategoryRequestModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
       <div className="w-full max-w-lg space-y-5 rounded-xl border border-snap-border bg-snap-surface p-8 shadow-2xl">
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-snap-textMain">Request Category</h3>
+          <h3 className="text-lg font-semibold text-snap-textMain">{t("categories.requestCategory")}</h3>
           <p className="text-sm text-snap-textDim">
-            You have reached the 20-category limit for this project.
+            {t("categories.limitReached")}
           </p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm text-snap-textDim">Category name *</label>
+            <label className="text-sm text-snap-textDim">{t("categories.categoryNameLabel")}</label>
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -72,7 +74,7 @@ export function CategoryRequestModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm text-snap-textDim">Optional note to admin</label>
+            <label className="text-sm text-snap-textDim">{t("categories.noteLabel")}</label>
             <textarea
               rows={3}
               value={note}
@@ -94,14 +96,14 @@ export function CategoryRequestModal({
               disabled={submitting}
               className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg disabled:opacity-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="rounded-md bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:opacity-60"
             >
-              {submitting ? "Sending..." : "Send Request"}
+              {submitting ? t("auth.sending") : t("categories.sendRequest")}
             </button>
           </div>
         </form>

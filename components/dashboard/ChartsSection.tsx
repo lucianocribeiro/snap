@@ -1,15 +1,16 @@
 import { ReactNode } from "react";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 function ChartCard({
   title,
   subtitle,
   filters,
-  hint,
+  content,
 }: {
   title: string;
   subtitle: string;
   filters: ReactNode;
-  hint: string;
+  content: ReactNode;
 }) {
   return (
     <article className="flex min-h-[320px] flex-col gap-6 rounded-xl border border-snap-border bg-snap-surface p-8">
@@ -22,10 +23,7 @@ function ChartCard({
       </header>
 
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-snap-border bg-snap-bg/50 p-8">
-        <div className="max-w-sm space-y-2 text-center">
-          <p className="text-sm font-medium text-snap-textMain">Chart placeholder</p>
-          <p className="text-sm text-snap-textDim">{hint}</p>
-        </div>
+        {content}
       </div>
     </article>
   );
@@ -52,9 +50,101 @@ function FilterSelect({
 
 type ChartsSectionProps = {
   projectId?: string;
+  loading?: boolean;
+  hasInvoices?: boolean;
+  spendByPeriod?: Array<{ label: string; value: number }>;
+  spendByCategory?: Array<{ label: string; value: number }>;
 };
 
-export function ChartsSection({ projectId }: ChartsSectionProps) {
+const chartColors = [
+  "bg-blue-400",
+  "bg-cyan-400",
+  "bg-emerald-400",
+  "bg-amber-400",
+  "bg-pink-400",
+  "bg-indigo-400",
+  "bg-rose-400",
+];
+
+function ChartSkeleton() {
+  return (
+    <div className="flex w-full max-w-xl items-end justify-between gap-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="flex w-full flex-col items-center gap-2">
+          <div className="h-32 w-full animate-pulse rounded-md bg-snap-bg" />
+          <div className="h-3 w-10 animate-pulse rounded bg-snap-bg" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SpendByPeriodChart({ points }: { points: Array<{ label: string; value: number }> }) {
+  const maxValue = Math.max(...points.map((point) => point.value), 0);
+
+  return (
+    <div className="w-full">
+      <div className="flex h-52 items-end gap-4">
+        {points.map((point) => {
+          const height = maxValue > 0 ? Math.max(10, Math.round((point.value / maxValue) * 100)) : 10;
+          return (
+            <div key={point.label} className="flex flex-1 flex-col items-center gap-2">
+              <div className="text-xs text-snap-textDim">{point.value.toLocaleString()}</div>
+              <div className="relative flex h-40 w-full items-end rounded-md bg-snap-bg/70">
+                <div
+                  className="w-full rounded-md bg-blue-500/70"
+                  style={{ height: `${height}%` }}
+                />
+              </div>
+              <div className="text-xs text-snap-textDim">{point.label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SpendByCategoryChart({ points }: { points: Array<{ label: string; value: number }> }) {
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+
+  if (total <= 0) {
+    return <p className="text-sm text-snap-textDim">No categorized spend yet.</p>;
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      {points.map((point, index) => {
+        const percentage = (point.value / total) * 100;
+        return (
+          <div key={point.label} className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${chartColors[index % chartColors.length]}`} />
+                <span className="text-snap-textMain">{point.label}</span>
+              </div>
+              <span className="text-snap-textDim">{percentage.toFixed(1)}%</span>
+            </div>
+            <div className="h-2 w-full rounded bg-snap-bg">
+              <div
+                className={`${chartColors[index % chartColors.length]} h-full rounded`}
+                style={{ width: `${Math.max(percentage, 4)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ChartsSection({
+  projectId,
+  loading = false,
+  hasInvoices = false,
+  spendByPeriod = [],
+  spendByCategory = [],
+}: ChartsSectionProps) {
   return (
     <section className="rounded-2xl border border-snap-border bg-snap-card p-8">
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
@@ -69,7 +159,7 @@ export function ChartsSection({ projectId }: ChartsSectionProps) {
             <>
               <FilterSelect
                 label="Project"
-                options={["All projects", "Acme Redesign", "ERP Migration", "Ops Hub"]}
+                options={["All projects"]}
               />
               <FilterSelect
                 label="Period"
@@ -77,7 +167,18 @@ export function ChartsSection({ projectId }: ChartsSectionProps) {
               />
             </>
           }
-          hint="Bar chart visualization will render once invoice data is available."
+          content={
+            loading ? (
+              <ChartSkeleton />
+            ) : !hasInvoices ? (
+              <EmptyState
+                title="No invoices yet"
+                description="Upload your first invoice to see spend trends by month."
+              />
+            ) : (
+              <SpendByPeriodChart points={spendByPeriod} />
+            )
+          }
         />
 
         <ChartCard
@@ -90,10 +191,21 @@ export function ChartsSection({ projectId }: ChartsSectionProps) {
           filters={
             <FilterSelect
               label="Project"
-              options={["All projects", "Acme Redesign", "ERP Migration", "Ops Hub"]}
+              options={["All projects"]}
             />
           }
-          hint="Pie or donut breakdown appears after categorization is configured."
+          content={
+            loading ? (
+              <ChartSkeleton />
+            ) : !hasInvoices ? (
+              <EmptyState
+                title="No invoices yet"
+                description="Category allocation appears after invoices start coming in."
+              />
+            ) : (
+              <SpendByCategoryChart points={spendByCategory} />
+            )
+          }
         />
       </div>
     </section>

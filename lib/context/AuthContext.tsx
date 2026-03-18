@@ -41,6 +41,18 @@ function getActiveContextCookie(): ActiveContext | null {
   return value === "org_admin" || value === "super_admin" ? value : null;
 }
 
+function resolveEffectiveRole(
+  role: UserRole,
+  context: ActiveContext,
+  hasOrganizationLink: boolean,
+): UserRole {
+  if (role === "super_admin" && hasOrganizationLink && context === "org_admin") {
+    return "org_admin";
+  }
+
+  return role;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -62,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextRole = (data?.role as UserRole) ?? null;
       const nextOrganizationId = data?.organization_id ?? null;
 
-      setUserRole(nextRole);
       setOrganizationId(nextOrganizationId);
 
       if (nextOrganizationId) {
@@ -89,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearActiveContextCookie();
       }
 
+      const effectiveRole = resolveEffectiveRole(nextRole, nextContext, Boolean(nextOrganizationId));
+      setUserRole(effectiveRole);
       setActiveContext(nextContext);
     },
     [supabase],
@@ -137,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const switchContext = useCallback(
     (nextContext: ActiveContext) => {
       if (!hasDualAccess) return;
+      const nextRole = resolveEffectiveRole("super_admin", nextContext, true);
+      setUserRole(nextRole);
       setActiveContext(nextContext);
       setActiveContextCookie(nextContext);
       router.push(nextContext === "org_admin" ? "/dashboard" : "/super-admin/dashboard");

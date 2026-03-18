@@ -39,20 +39,6 @@ function getLanguageFromStorage(): Language {
   return stored === "es" ? "es" : "en";
 }
 
-function readNestedValue(source: Record<string, unknown>, key: string): string | null {
-  const path = key.split(".");
-  let current: unknown = source;
-
-  for (const segment of path) {
-    if (!current || typeof current !== "object" || !(segment in current)) {
-      return null;
-    }
-    current = (current as Record<string, unknown>)[segment];
-  }
-
-  return typeof current === "string" ? current : null;
-}
-
 function applyParams(template: string, params?: TranslateParams) {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(params[name] ?? ""));
@@ -106,9 +92,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string, params?: TranslateParams) => {
-      const currentDictionary = translations[language];
-      const fallbackDictionary = translations.en;
-      const value = readNestedValue(currentDictionary, key) ?? readNestedValue(fallbackDictionary, key);
+      const resolveKey = (dictionary: Record<string, unknown>) => {
+        const keys = key.split(".");
+        let value: unknown = dictionary;
+
+        for (const k of keys) {
+          if (!value || typeof value !== "object") return undefined;
+          value = (value as Record<string, unknown>)[k];
+          if (value === undefined) return undefined;
+        }
+
+        return typeof value === "string" ? value : undefined;
+      };
+
+      const value = resolveKey(translations[language]) ?? resolveKey(translations.en);
       if (!value) return key;
       return applyParams(value, params);
     },

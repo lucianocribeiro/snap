@@ -35,14 +35,15 @@ export async function middleware(request: NextRequest) {
     session.role === "super_admin" &&
     Boolean(session.organizationId) &&
     activeContext === "org_admin";
+  const effectiveRole = superAdminInOrgContext ? "org_admin" : session.role;
 
   if (
     requiredRoles &&
-    (!session.role ||
-      (!requiredRoles.includes(session.role) &&
+    (!effectiveRole ||
+      (!requiredRoles.includes(effectiveRole) &&
         !(superAdminInOrgContext && isOrgRoute(pathname))))
   ) {
-    const fallbackUrl = new URL(getDashboardPathForRole(session.role), request.url);
+    const fallbackUrl = new URL(getDashboardPathForRole(effectiveRole), request.url);
     return copySupabaseCookies(session.response, NextResponse.redirect(fallbackUrl));
   }
 

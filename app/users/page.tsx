@@ -412,7 +412,7 @@ export default function UsersPage() {
                   {users.map((user) => {
                     const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "-";
                     const toggleLabel = user.status === "active" ? t("users.deactivate") : t("users.activate");
-                    const canRemove = user.status === "inactive" && user.id !== currentUser?.id;
+                    const canRemove = user.status === "inactive";
 
                     return (
                       <tr key={user.id} className="border-b border-snap-border/70 text-sm text-snap-textMain last:border-b-0">

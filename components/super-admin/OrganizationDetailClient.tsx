@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { useAuth } from "@/lib/context/AuthContext";
 import type { OrganizationListItem } from "@/lib/super-admin/data";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -26,13 +25,17 @@ function formatDate(value: string) {
 
 export function OrganizationDetailClient({ organization }: OrganizationDetailClientProps) {
   const router = useRouter();
-  const { organizationId } = useAuth();
   const { t } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSuccess, setAdminSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -68,6 +71,35 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
     setSubmitting(false);
     setConfirmOpen(false);
     setToast(nextStatus === "active" ? t("superAdmin.organizationActivated") : t("superAdmin.organizationDeactivated"));
+    router.refresh();
+  };
+
+  const assignAdmin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const email = newAdminEmail.trim().toLowerCase();
+    if (!email) return;
+
+    setAdminSubmitting(true);
+    setAdminError(null);
+    setAdminSuccess(null);
+
+    const response = await fetch(`/super-admin/api/organizations/${organization.id}/assign-admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newAdminEmail: email }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+    if (!response.ok) {
+      setAdminError(result.error ?? "Failed to assign admin.");
+      setAdminSubmitting(false);
+      return;
+    }
+
+    setAdminSubmitting(false);
+    setNewAdminEmail("");
+    setAdminSuccess("Admin assigned successfully.");
     router.refresh();
   };
 
@@ -147,13 +179,48 @@ export function OrganizationDetailClient({ organization }: OrganizationDetailCli
           </button>
           <button
             type="button"
-            disabled={organization.status !== "inactive" || organizationId === organization.id}
+            disabled={organization.status !== "inactive"}
             onClick={() => setDeleteConfirmOpen(true)}
             className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t("common.delete")}
           </button>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-snap-border bg-snap-surface p-6">
+        <h3 className="mb-4 text-base font-semibold text-snap-textMain">Admin Management</h3>
+
+        <div className="mb-4">
+          <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("superAdmin.adminName")}</p>
+          <p className="mt-1 text-sm text-snap-textMain">{organization.adminName}</p>
+          <p className="text-xs uppercase tracking-wide text-snap-textDim mt-3">{t("superAdmin.adminEmail")}</p>
+          <p className="mt-1 text-sm text-snap-textMain">{organization.adminEmail}</p>
+        </div>
+
+        <form onSubmit={(e) => void assignAdmin(e)} className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 space-y-2" style={{ minWidth: "220px" }}>
+            <label className="text-sm text-snap-textDim">New Admin Email</label>
+            <input
+              type="email"
+              value={newAdminEmail}
+              onChange={(event) => setNewAdminEmail(event.target.value)}
+              placeholder="admin@example.com"
+              className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={adminSubmitting}
+            className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {adminSubmitting ? "Assigning..." : "Assign Admin"}
+          </button>
+        </form>
+
+        {adminError ? <p className="mt-3 text-sm text-red-300">{adminError}</p> : null}
+        {adminSuccess ? <p className="mt-3 text-sm text-green-300">{adminSuccess}</p> : null}
       </div>
 
       <ConfirmModal

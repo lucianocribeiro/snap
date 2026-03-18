@@ -209,7 +209,7 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
                       </button>
                       <button
                         type="button"
-                        disabled={organization.status !== "inactive" || (organizationId === organization.id)}
+                        disabled={organization.status !== "inactive"}
                         onClick={() => setDeleteSelected(organization)}
                         className="text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
                       >

@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/context/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function isValidEmail(email: string) {
@@ -12,6 +13,7 @@ function isValidEmail(email: string) {
 export function NewOrganizationForm() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [organizationName, setOrganizationName] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -19,6 +21,34 @@ export function NewOrganizationForm() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSelfAdmin, setIsSelfAdmin] = useState(false);
+  const [selfProfile, setSelfProfile] = useState<{ firstName: string; lastName: string } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    void supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setSelfProfile({
+            firstName: (data.first_name as string | null)?.trim() ?? "",
+            lastName: (data.last_name as string | null)?.trim() ?? "",
+          });
+        }
+      });
+  }, [user, supabase]);
+
+  const handleSelfAdminToggle = (checked: boolean) => {
+    setIsSelfAdmin(checked);
+    if (checked && user) {
+      setFirstName(selfProfile?.firstName ?? "");
+      setLastName(selfProfile?.lastName ?? "");
+      setEmail(user.email ?? "");
+    }
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,13 +106,27 @@ export function NewOrganizationForm() {
         />
       </div>
 
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-snap-textDim">
+        <input
+          type="checkbox"
+          checked={isSelfAdmin}
+          onChange={(event) => handleSelfAdminToggle(event.target.checked)}
+          className="h-4 w-4 rounded border border-snap-border accent-snap-accent"
+        />
+        I am the admin of this organization
+      </label>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm text-snap-textDim">{t("superAdmin.adminFirstName")}</label>
           <input
             value={firstName}
             onChange={(event) => setFirstName(event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            readOnly={isSelfAdmin}
+            className={[
+              "w-full rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textMain outline-none",
+              isSelfAdmin ? "bg-snap-surface opacity-70 cursor-not-allowed" : "bg-snap-bg",
+            ].join(" ")}
             required
           />
         </div>
@@ -92,7 +136,11 @@ export function NewOrganizationForm() {
           <input
             value={lastName}
             onChange={(event) => setLastName(event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            readOnly={isSelfAdmin}
+            className={[
+              "w-full rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textMain outline-none",
+              isSelfAdmin ? "bg-snap-surface opacity-70 cursor-not-allowed" : "bg-snap-bg",
+            ].join(" ")}
             required
           />
         </div>
@@ -104,7 +152,11 @@ export function NewOrganizationForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+          readOnly={isSelfAdmin}
+          className={[
+            "w-full rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textMain outline-none",
+            isSelfAdmin ? "bg-snap-surface opacity-70 cursor-not-allowed" : "bg-snap-bg",
+          ].join(" ")}
           required
         />
       </div>

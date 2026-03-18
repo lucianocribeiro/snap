@@ -12,8 +12,14 @@ export async function POST(
   }
 
   const { id } = await context.params;
-  const body = (await request.json().catch(() => null)) as { newAdminEmail?: string } | null;
+  const body = (await request.json().catch(() => null)) as {
+    newAdminEmail?: string;
+    firstName?: string;
+    lastName?: string;
+  } | null;
   const newAdminEmail = body?.newAdminEmail?.trim().toLowerCase();
+  const firstName = body?.firstName?.trim() ?? "";
+  const lastName = body?.lastName?.trim() ?? "";
 
   if (!newAdminEmail) {
     return NextResponse.json({ error: "New admin email is required." }, { status: 400 });
@@ -66,6 +72,8 @@ export async function POST(
         data: {
           role: "org_admin",
           organization_id: id,
+          ...(firstName ? { first_name: firstName } : {}),
+          ...(lastName ? { last_name: lastName } : {}),
         },
       },
     );
@@ -84,6 +92,8 @@ export async function POST(
         role: "org_admin",
         organization_id: id,
         status: "active",
+        ...(firstName ? { first_name: firstName } : {}),
+        ...(lastName ? { last_name: lastName } : {}),
       },
       { onConflict: "id" },
     );

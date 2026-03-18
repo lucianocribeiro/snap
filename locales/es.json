@@ -428,7 +428,8 @@
     "allOrganizations": "Todas las organizaciones",
     "allRoles": "Todos los roles",
     "allStatuses": "Todos los estados",
-    "usersFilterHint": "Intenta cambiar los filtros de organización, rol o estado."
+    "usersFilterHint": "Intenta cambiar los filtros de organización, rol o estado.",
+    "adminManagement": "Gestión de Administrador"
   },
   "status": {
     "paid": "Pagada",

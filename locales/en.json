@@ -429,7 +429,8 @@
     "allOrganizations": "All organizations",
     "allRoles": "All roles",
     "allStatuses": "All statuses",
-    "usersFilterHint": "Try changing your organization, role, or status filters."
+    "usersFilterHint": "Try changing your organization, role, or status filters.",
+    "adminManagement": "Admin Management"
   },
   "status": {
     "paid": "Paid",

@@ -8,7 +8,6 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import type { PeriodType, ProjectColumn } from "@/components/dashboard/types";
 import { InvoicesTable, type InvoiceTableRow } from "@/components/invoices/InvoicesTable";
 import { PROJECT_COLUMN_LABELS } from "@/components/projects/constants";
-import { ReportBuilder } from "@/components/reports/ReportBuilder";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -295,7 +294,16 @@ export default function ProjectDetailPage() {
           </section>
         ) : null}
 
-        {!loading && project && activeTab === "reports" ? <ReportBuilder projectId={project.id} /> : null}
+        {!loading && project && activeTab === "reports" ? (
+          <section className="flex items-center justify-center rounded-lg border border-snap-border bg-snap-surface p-12">
+            <Link
+              href={`/reports?project=${project.id}`}
+              className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
+            >
+              {t("nav.reports")}
+            </Link>
+          </section>
+        ) : null}
       </div>
 
       <ConfirmModal

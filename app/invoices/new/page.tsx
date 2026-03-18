@@ -907,11 +907,13 @@ export default function NewInvoicePage() {
           {step === 5 ? (
             <div className="space-y-5">
               <h2 className="text-lg font-semibold text-snap-textMain">{t("invoices.confirmAndSave")}</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => (
-                  <div key={column}>{renderField(column)}</div>
-                ))}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Row 1: Invoice # | Invoice Date */}
+                {renderField("invoiceNumber")}
+                {renderField("invoiceDate")}
 
+                {/* Row 2: Due Date | Currency */}
+                {renderField("dueDate")}
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">{t("invoices.currency")}</label>
                   <select
@@ -927,7 +929,29 @@ export default function NewInvoicePage() {
                   </select>
                 </div>
 
+                {/* Row 3: Amount | Tax */}
+                {renderField("amount")}
+                {renderField("tax")}
+
+                {/* Row 4: Total Amount | Status */}
+                {renderField("totalAmount")}
                 <div className="space-y-2">
+                  <label className="text-sm text-snap-textDim">{t("common.status")} *</label>
+                  <select
+                    value={formState.status}
+                    onChange={(event) => updateField("status", event.target.value as "paid" | "unpaid")}
+                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                  >
+                    <option value="paid">{t("status.paid")}</option>
+                    <option value="unpaid">{t("status.unpaid")}</option>
+                  </select>
+                </div>
+
+                {/* Row 5: Vendor (full width) */}
+                <div className="col-span-2">{renderField("vendor")}</div>
+
+                {/* Row 6: Category (full width) */}
+                <div className="col-span-2 space-y-2">
                   <label className="text-sm text-snap-textDim">{t("categories.title")} *</label>
                   <select
                     value={formState.categoryId}
@@ -969,17 +993,15 @@ export default function NewInvoicePage() {
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-snap-textDim">{t("common.status")} *</label>
-                  <select
-                    value={formState.status}
-                    onChange={(event) => updateField("status", event.target.value as "paid" | "unpaid")}
-                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
-                  >
-                    <option value="paid">{t("status.paid")}</option>
-                    <option value="unpaid">{t("status.unpaid")}</option>
-                  </select>
-                </div>
+                {/* Row 7: Notes (full width) */}
+                <div className="col-span-2">{renderField("notes")}</div>
+
+                {/* Custom columns (full width) */}
+                {(["custom1", "custom2", "custom3"] as ProjectColumn[]).map((col) =>
+                  selectedColumns.includes(col) ? (
+                    <div key={col} className="col-span-2">{renderField(col)}</div>
+                  ) : null
+                )}
               </div>
             </div>
           ) : null}

@@ -1,6 +1,12 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { ReactNode } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+
+type ProjectOption = { id: string; name: string };
 
 function ChartCard({
   title,
@@ -33,16 +39,26 @@ function ChartCard({
 function FilterSelect({
   label,
   options,
+  value,
+  onChange,
 }: {
   label: string;
-  options: string[];
+  options: Array<{ value: string; label: string }>;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <label className="flex items-center gap-3 text-sm text-snap-textDim">
       <span>{label}</span>
-      <select className="rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none">
+      <select
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        className="rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+      >
         {options.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
         ))}
       </select>
     </label>
@@ -153,6 +169,124 @@ export function ChartsSection({
   spendByCategory = [],
 }: ChartsSectionProps) {
   const { t } = useLanguage();
+  const supabase = useMemo(() => createClient(), []);
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("all");
+  const [projectPeriodSpend, setProjectPeriodSpend] = useState<Array<{ label: string; value: number }> | null>(null);
+  const [projectCategorySpend, setProjectCategorySpend] = useState<Array<{ label: string; value: number }> | null>(null);
+  const [projectChartsLoading, setProjectChartsLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("status", "active")
+        .order("name");
+      setProjects((data as ProjectOption[] | null) ?? []);
+    };
+    void load();
+  }, [supabase]);
+
+  useEffect(() => {
+    if (selectedProjectId === "all" || projectId) {
+      setProjectPeriodSpend(null);
+      setProjectCategorySpend(null);
+      return;
+    }
+
+    const fetchProjectCharts = async () => {
+      setProjectChartsLoading(true);
+      const now = new Date();
+      const sixMonthStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      function dateStr(d: Date) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+
+      const [{ data: monthlyRows }, { data: catRows }, { data: catDefs }] = await Promise.all([
+        supabase
+          .from("invoices")
+          .select("invoice_date, total_amount")
+          .eq("project_id", selectedProjectId)
+          .gte("invoice_date", dateStr(sixMonthStart))
+          .lt("invoice_date", dateStr(nextMonthStart)),
+        supabase
+          .from("invoices")
+          .select("category_id, total_amount")
+          .eq("project_id", selectedProjectId),
+        supabase.from("categories").select("id, name").eq("project_id", selectedProjectId),
+      ]);
+
+      const monthKeys: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(sixMonthStart.getFullYear(), sixMonthStart.getMonth() + i, 1);
+        monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      }
+
+      const spendByMonth = new Map(monthKeys.map((k) => [k, 0]));
+      (monthlyRows ?? []).forEach((row: { invoice_date: string | null; total_amount: number | null }) => {
+        if (!row.invoice_date) return;
+        const d = new Date(row.invoice_date);
+        if (Number.isNaN(d.getTime())) return;
+        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (spendByMonth.has(k)) spendByMonth.set(k, (spendByMonth.get(k) ?? 0) + (row.total_amount ?? 0));
+      });
+
+      const periodData = monthKeys.map((k) => {
+        const [yr, mo] = k.split("-");
+        return {
+          label: new Date(Number(yr), Number(mo) - 1, 1).toLocaleDateString(undefined, { month: "short" }),
+          value: spendByMonth.get(k) ?? 0,
+        };
+      });
+
+      const catNameById = new Map(
+        (catDefs ?? []).map((c: { id: string; name: string }) => [c.id, c.name]),
+      );
+      const catTotals = new Map<string, number>();
+      (catRows ?? []).forEach((row: { category_id: string | null; total_amount: number | null }) => {
+        const label = row.category_id
+          ? catNameById.get(row.category_id) ?? t("dashboard.charts.uncategorized")
+          : t("dashboard.charts.uncategorized");
+        catTotals.set(label, (catTotals.get(label) ?? 0) + (row.total_amount ?? 0));
+      });
+
+      const sorted = Array.from(catTotals.entries())
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+      const top6 = sorted.slice(0, 6);
+      const otherVal = sorted.slice(6).reduce((sum, x) => sum + x.value, 0);
+      const catData = otherVal > 0 ? [...top6, { label: t("dashboard.charts.other"), value: otherVal }] : top6;
+
+      setProjectPeriodSpend(periodData);
+      setProjectCategorySpend(catData);
+      setProjectChartsLoading(false);
+    };
+
+    void fetchProjectCharts();
+  }, [selectedProjectId, projectId, supabase, t]);
+
+  const displayPeriodSpend = projectPeriodSpend ?? spendByPeriod;
+  const displayCategorySpend = projectCategorySpend ?? spendByCategory;
+  const isLoading = loading || projectChartsLoading;
+  const displayHasInvoices =
+    projectPeriodSpend !== null
+      ? projectPeriodSpend.some((p) => p.value > 0) || (projectCategorySpend ?? []).some((c) => c.value > 0)
+      : hasInvoices;
+
+  const projectOptions = [
+    { value: "all", label: t("dashboard.charts.allProjects") },
+    ...projects.map((p) => ({ value: p.id, label: p.name })),
+  ];
+
+  const periodOptions = [
+    { value: t("dashboard.charts.monthly"), label: t("dashboard.charts.monthly") },
+    { value: t("dashboard.charts.weekly"), label: t("dashboard.charts.weekly") },
+    { value: t("dashboard.charts.quarterly"), label: t("dashboard.charts.quarterly") },
+    { value: t("dashboard.charts.yearly"), label: t("dashboard.charts.yearly") },
+  ];
 
   return (
     <section className="rounded-2xl border border-snap-border bg-snap-card p-8">
@@ -166,31 +300,30 @@ export function ChartsSection({
           }
           filters={
             <>
-              <FilterSelect
-                label={t("dashboard.charts.projectFilter")}
-                options={[t("dashboard.charts.allProjects")]}
-              />
+              {!projectId ? (
+                <FilterSelect
+                  label={t("dashboard.charts.projectFilter")}
+                  options={projectOptions}
+                  value={selectedProjectId}
+                  onChange={setSelectedProjectId}
+                />
+              ) : null}
               <FilterSelect
                 label={t("dashboard.charts.periodFilter")}
-                options={[
-                  t("dashboard.charts.monthly"),
-                  t("dashboard.charts.weekly"),
-                  t("dashboard.charts.quarterly"),
-                  t("dashboard.charts.yearly"),
-                ]}
+                options={periodOptions}
               />
             </>
           }
           content={
-            loading ? (
+            isLoading ? (
               <ChartSkeleton />
-            ) : !hasInvoices ? (
+            ) : !displayHasInvoices ? (
               <EmptyState
                 title={t("dashboard.charts.noInvoicesTitle")}
                 description={t("dashboard.charts.noInvoicesTrendDescription")}
               />
             ) : (
-              <SpendByPeriodChart points={spendByPeriod} />
+              <SpendByPeriodChart points={displayPeriodSpend} />
             )
           }
         />
@@ -203,22 +336,26 @@ export function ChartsSection({
               : t("dashboard.charts.spendByCategorySubtitleAll")
           }
           filters={
-            <FilterSelect
-              label={t("dashboard.charts.projectFilter")}
-              options={[t("dashboard.charts.allProjects")]}
-            />
+            !projectId ? (
+              <FilterSelect
+                label={t("dashboard.charts.projectFilter")}
+                options={projectOptions}
+                value={selectedProjectId}
+                onChange={setSelectedProjectId}
+              />
+            ) : null
           }
           content={
-            loading ? (
+            isLoading ? (
               <ChartSkeleton />
-            ) : !hasInvoices ? (
+            ) : !displayHasInvoices ? (
               <EmptyState
                 title={t("dashboard.charts.noInvoicesTitle")}
                 description={t("dashboard.charts.noInvoicesCategoryDescription")}
               />
             ) : (
               <SpendByCategoryChart
-                points={spendByCategory}
+                points={displayCategorySpend}
                 emptyLabel={t("dashboard.charts.noCategorizedSpend")}
               />
             )

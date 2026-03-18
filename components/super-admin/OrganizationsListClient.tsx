@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -27,9 +26,9 @@ function formatDate(value: string) {
 }
 
 export function OrganizationsListClient({ organizations }: OrganizationsListClientProps) {
-  const router = useRouter();
   const { organizationId } = useAuth();
   const { t } = useLanguage();
+  const [orgList, setOrgList] = useState<OrganizationListItem[]>(organizations);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [toast, setToast] = useState<string | null>(null);
@@ -54,7 +53,7 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
   }, [t]);
 
   const filtered = useMemo(() => {
-    return organizations.filter((organization) => {
+    return orgList.filter((organization) => {
       const byStatus = status === "all" ? true : organization.status === status;
       const bySearch =
         organization.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -63,7 +62,7 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
 
       return byStatus && bySearch;
     });
-  }, [organizations, search, status]);
+  }, [orgList, search, status]);
 
   const toggleStatus = async () => {
     if (!selected) return;
@@ -85,10 +84,10 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
       return;
     }
 
+    setOrgList((prev) => prev.map((org) => org.id === selected.id ? { ...org, status: nextStatus } : org));
     setSubmitting(false);
     setSelected(null);
     setToast(nextStatus === "active" ? t("superAdmin.organizationActivated") : t("superAdmin.organizationDeactivated"));
-    router.refresh();
   };
 
   const deleteOrganization = async () => {
@@ -107,10 +106,10 @@ export function OrganizationsListClient({ organizations }: OrganizationsListClie
       return;
     }
 
+    setOrgList((prev) => prev.filter((org) => org.id !== deleteSelected.id));
     setDeleteSubmitting(false);
     setDeleteSelected(null);
-    router.push("/super-admin/organizations?deleted=1");
-    router.refresh();
+    setToast(t("superAdmin.organizationDeleted"));
   };
 
   return (

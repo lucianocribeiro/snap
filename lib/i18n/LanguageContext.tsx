@@ -48,7 +48,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [language, setLanguageState] = useState<Language>("en");
-  const [readyFromProfile, setReadyFromProfile] = useState(false);
 
   useEffect(() => {
     setLanguageState(getLanguageFromStorage());
@@ -56,10 +55,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sync = async () => {
-      if (!user) {
-        setReadyFromProfile(true);
-        return;
-      }
+      if (!user) return;
 
       const { data } = await supabase
         .from("user_profiles")
@@ -70,7 +66,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const nextLanguage = data?.language === "es" ? "es" : "en";
       setLanguageState(nextLanguage);
       window.localStorage.setItem(STORAGE_KEY, nextLanguage);
-      setReadyFromProfile(true);
     };
 
     void sync();
@@ -120,10 +115,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }),
     [language, setLanguage, t],
   );
-
-  if (!readyFromProfile && user) {
-    return null;
-  }
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

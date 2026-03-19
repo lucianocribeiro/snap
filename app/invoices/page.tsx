@@ -42,7 +42,7 @@ type FiltersState = {
 export default function InvoicesPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { userRole } = useAuth();
+  const { userRole, canEdit } = useAuth();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<NamedEntity[]>([]);
@@ -164,13 +164,15 @@ export default function InvoicesPage() {
         <PageHeader
           title={t("invoices.title")}
           action={
-            <button
-              type="button"
-              onClick={() => router.push("/invoices/new")}
-              className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
+            canEdit ? (
+              <button
+                type="button"
+                onClick={() => router.push("/invoices/new")}
+                className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain hover:bg-snap-bg"
               >
-              {t("invoices.addInvoiceWithPlus")}
-            </button>
+                {t("invoices.addInvoiceWithPlus")}
+              </button>
+            ) : null
           }
         />
 

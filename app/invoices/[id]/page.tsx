@@ -68,7 +68,7 @@ export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { userRole } = useAuth();
+  const { userRole, canEdit } = useAuth();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -223,6 +223,8 @@ export default function InvoiceDetailPage() {
     router.push("/invoices");
   };
 
+  const fieldClass = `w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none${!canEdit ? " opacity-70" : ""}`;
+
   const renderField = (column: ProjectColumn) => {
     if (!invoice || !selectedColumns.includes(column)) return null;
 
@@ -231,9 +233,10 @@ export default function InvoiceDetailPage() {
         <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">{t("common.invoiceNumber")}</label>
           <input
+            readOnly={!canEdit}
             value={invoice.invoiceNumber}
             onChange={(event) => updateField("invoiceNumber", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -243,9 +246,10 @@ export default function InvoiceDetailPage() {
         <div key={column} className="col-span-2 space-y-2">
           <label className="text-sm text-snap-textDim">{t("common.vendor")}</label>
           <input
+            readOnly={!canEdit}
             value={invoice.vendor}
             onChange={(event) => updateField("vendor", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -256,9 +260,10 @@ export default function InvoiceDetailPage() {
           <label className="text-sm text-snap-textDim">{t("invoices.invoiceDate")}</label>
           <input
             type="date"
+            readOnly={!canEdit}
             value={invoice.invoiceDate}
             onChange={(event) => updateField("invoiceDate", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -269,9 +274,10 @@ export default function InvoiceDetailPage() {
           <label className="text-sm text-snap-textDim">{t("invoices.dueDate")}</label>
           <input
             type="date"
+            readOnly={!canEdit}
             value={invoice.dueDate}
             onChange={(event) => updateField("dueDate", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -283,9 +289,10 @@ export default function InvoiceDetailPage() {
           <input
             type="number"
             step="0.01"
+            readOnly={!canEdit}
             value={invoice.amount}
             onChange={(event) => updateField("amount", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -297,9 +304,10 @@ export default function InvoiceDetailPage() {
           <input
             type="number"
             step="0.01"
+            readOnly={!canEdit}
             value={invoice.tax}
             onChange={(event) => updateField("tax", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -311,9 +319,10 @@ export default function InvoiceDetailPage() {
           <input
             type="number"
             step="0.01"
+            readOnly={!canEdit}
             value={invoice.totalAmount}
             onChange={(event) => updateField("totalAmount", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -324,9 +333,10 @@ export default function InvoiceDetailPage() {
           <label className="text-sm text-snap-textDim">{t("common.notes")}</label>
           <textarea
             rows={3}
+            readOnly={!canEdit}
             value={invoice.notes}
             onChange={(event) => updateField("notes", event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -336,9 +346,10 @@ export default function InvoiceDetailPage() {
         <div key={column} className="space-y-2">
           <label className="text-sm text-snap-textDim">{customLabels[column]}</label>
           <input
+            readOnly={!canEdit}
             value={invoice[column]}
             onChange={(event) => updateField(column, event.target.value)}
-            className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+            className={fieldClass}
           />
         </div>
       );
@@ -413,15 +424,22 @@ export default function InvoiceDetailPage() {
             </article>
 
             <article className="space-y-4 rounded-xl border border-snap-border bg-snap-surface p-5">
+              {!canEdit ? (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                  {t("invoices.viewOnlyNotice")}
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-2 gap-4">
                 {(Object.keys(PROJECT_COLUMN_LABELS) as ProjectColumn[]).map((column) => renderField(column))}
 
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">{t("invoices.currency")}</label>
                   <select
+                    disabled={!canEdit}
                     value={invoice.currency}
                     onChange={(event) => updateField("currency", event.target.value as CurrencyCode)}
-                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                    className={`w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none${!canEdit ? " opacity-70" : ""}`}
                   >
                     {CURRENCY_OPTIONS.map((option) => (
                       <option key={option} value={option}>
@@ -434,9 +452,10 @@ export default function InvoiceDetailPage() {
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">{t("categories.title")}</label>
                   <select
+                    disabled={!canEdit}
                     value={invoice.categoryId}
                     onChange={(event) => updateField("categoryId", event.target.value)}
-                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                    className={`w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none${!canEdit ? " opacity-70" : ""}`}
                   >
                     <option value="">{t("invoices.selectCategory")}</option>
                     {categories.map((category) => (
@@ -450,9 +469,10 @@ export default function InvoiceDetailPage() {
                 <div className="space-y-2">
                   <label className="text-sm text-snap-textDim">{t("common.status")}</label>
                   <select
+                    disabled={!canEdit}
                     value={invoice.status}
                     onChange={(event) => updateField("status", event.target.value as "paid" | "unpaid")}
-                    className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none"
+                    className={`w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain outline-none${!canEdit ? " opacity-70" : ""}`}
                   >
                     <option value="paid">{t("status.paid")}</option>
                     <option value="unpaid">{t("status.unpaid")}</option>
@@ -469,14 +489,16 @@ export default function InvoiceDetailPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => void saveChanges()}
-                  className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain"
-                >
-                  {t("users.saveChanges")}
-                </button>
-                {canDelete ? (
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => void saveChanges()}
+                    className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm font-medium text-snap-textMain"
+                  >
+                    {t("users.saveChanges")}
+                  </button>
+                ) : null}
+                {canDelete && canEdit ? (
                   <button
                     type="button"
                     onClick={() => setDeleteOpen(true)}

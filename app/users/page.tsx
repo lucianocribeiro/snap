@@ -23,6 +23,7 @@ type UserProfileRecord = {
   status: string | null;
   is_active: boolean | null;
   last_login_at: string | null;
+  access_level: string | null;
 };
 
 type UserRow = {
@@ -33,6 +34,7 @@ type UserRow = {
   role: UserRole;
   status: UserStatus;
   lastLoginAt: string | null;
+  accessLevel: "edit" | "view_only";
 };
 
 type InviteModalState = {
@@ -46,6 +48,7 @@ type EditModalState = {
   lastName: string;
   role: UserRole;
   status: UserStatus;
+  accessLevel: "edit" | "view_only";
 };
 
 const INITIAL_INVITE_STATE: InviteModalState = {
@@ -66,6 +69,11 @@ function normalizeStatus(record: UserProfileRecord): UserStatus {
   return record.status?.toLowerCase() === "inactive" ? "inactive" : "active";
 }
 
+function normalizeAccessLevel(record: UserProfileRecord): "edit" | "view_only" {
+  if (normalizeRole(record.role) !== "user") return "edit";
+  return record.access_level === "view_only" ? "view_only" : "edit";
+}
+
 function mapUserRecord(record: UserProfileRecord): UserRow {
   return {
     id: record.id,
@@ -75,6 +83,7 @@ function mapUserRecord(record: UserProfileRecord): UserRow {
     role: normalizeRole(record.role),
     status: normalizeStatus(record),
     lastLoginAt: record.last_login_at,
+    accessLevel: normalizeAccessLevel(record),
   };
 }
 
@@ -136,13 +145,13 @@ export default function UsersPage() {
 
     const { data, error } = await supabase
       .from("user_profiles")
-      .select("id, first_name, last_name, email, role, is_active, last_login_at")
+      .select("id, first_name, last_name, email, role, is_active, last_login_at, access_level")
       .order("first_name", { ascending: true });
 
     if (error) {
       const fallback = await supabase
         .from("user_profiles")
-        .select("id, first_name, last_name, email, role, status, last_login_at")
+        .select("id, first_name, last_name, email, role, status, last_login_at, access_level")
         .order("first_name", { ascending: true });
 
       if (fallback.error) {
@@ -183,6 +192,7 @@ export default function UsersPage() {
       lastName: user.lastName,
       role: user.role,
       status: user.status,
+      accessLevel: user.accessLevel,
     });
   };
 
@@ -266,6 +276,10 @@ export default function UsersPage() {
       role: editForm.role,
     };
 
+    if (editForm.role === "user") {
+      payload.access_level = editForm.accessLevel;
+    }
+
     if (statusSource === "is_active") {
       payload.is_active = editForm.status === "active";
     } else {
@@ -289,6 +303,7 @@ export default function UsersPage() {
               lastName,
               role: editForm.role,
               status: editForm.status,
+              accessLevel: editForm.role === "user" ? editForm.accessLevel : "edit",
             }
           : user,
       ),
@@ -404,6 +419,7 @@ export default function UsersPage() {
                     <th className="px-4 py-3 font-medium">{t("auth.email")}</th>
                     <th className="px-4 py-3 font-medium">{t("users.role")}</th>
                     <th className="px-4 py-3 font-medium">{t("common.status")}</th>
+                    {isOrgAdmin ? <th className="px-4 py-3 font-medium">{t("users.access")}</th> : null}
                     <th className="px-4 py-3 font-medium">{t("users.lastLogin")}</th>
                     <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
                   </tr>
@@ -425,6 +441,18 @@ export default function UsersPage() {
                             variant="user"
                           />
                         </td>
+                        {isOrgAdmin ? (
+                          <td className="px-4 py-3">
+                            {user.role === "user" ? (
+                              <StatusBadge
+                                status={user.accessLevel === "edit" ? t("users.edit") : t("users.viewOnly")}
+                                variant="access"
+                              />
+                            ) : (
+                              <span className="text-snap-textDim">-</span>
+                            )}
+                          </td>
+                        ) : null}
                         <td className="px-4 py-3 text-snap-textDim">{formatLastLogin(user.lastLoginAt)}</td>
                         <td className="px-4 py-3">
                           {isOrgAdmin ? (
@@ -624,6 +652,38 @@ export default function UsersPage() {
                   </select>
                 </div>
               </div>
+
+              {editForm.role === "user" ? (
+                <div className="space-y-2">
+                  <label className="text-sm text-snap-textDim">{t("users.accessLevel")}</label>
+                  <div className="flex gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-snap-textMain">
+                      <input
+                        type="radio"
+                        name="accessLevel"
+                        value="edit"
+                        checked={editForm.accessLevel === "edit"}
+                        onChange={() =>
+                          setEditForm((previous) => (previous ? { ...previous, accessLevel: "edit" } : previous))
+                        }
+                      />
+                      {t("users.edit")}
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-snap-textMain">
+                      <input
+                        type="radio"
+                        name="accessLevel"
+                        value="view_only"
+                        checked={editForm.accessLevel === "view_only"}
+                        onChange={() =>
+                          setEditForm((previous) => (previous ? { ...previous, accessLevel: "view_only" } : previous))
+                        }
+                      />
+                      {t("users.viewOnly")}
+                    </label>
+                  </div>
+                </div>
+              ) : null}
 
               {editError ? (
                 <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">

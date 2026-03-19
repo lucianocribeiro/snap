@@ -234,6 +234,7 @@
     "addingCategory": "Agregando...",
     "confirmMapping": "Confirmar mapeo",
     "saveInvoice": "Guardar factura",
+    "viewOnlyNotice": "Tienes acceso de solo lectura. Contacta a tu administrador para realizar cambios.",
     "currencyOptions": {
       "USD": "USD - Dólar estadounidense",
       "ARS": "ARS - Peso argentino",
@@ -307,7 +308,11 @@
     "failedUpdateUser": "No se pudo actualizar el usuario.",
     "updated": "Usuario actualizado.",
     "failedUpdateStatus": "No se pudo actualizar el estado del usuario.",
-    "removing": "Eliminando..."
+    "removing": "Eliminando...",
+    "accessLevel": "Nivel de acceso",
+    "edit": "Edición",
+    "viewOnly": "Solo lectura",
+    "access": "Acceso"
   },
   "categories": {
     "title": "Categorías",

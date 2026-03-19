@@ -130,7 +130,7 @@ export default function NewInvoicePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { t } = useLanguage();
-  const { user, organizationId } = useAuth();
+  const { user, organizationId, canEdit } = useAuth();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -165,6 +165,12 @@ export default function NewInvoicePage() {
     t("invoices.steps.mapColumns"),
     t("invoices.steps.confirm"),
   ];
+
+  useEffect(() => {
+    if (!canEdit) {
+      router.replace("/invoices");
+    }
+  }, [canEdit, router]);
 
   useEffect(() => {
     const loadProjects = async () => {

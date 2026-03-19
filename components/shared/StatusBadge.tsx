@@ -1,4 +1,4 @@
-type StatusVariant = "invoice" | "user" | "org" | "project";
+type StatusVariant = "invoice" | "user" | "org" | "project" | "access";
 
 type StatusBadgeProps = {
   status: string;
@@ -24,6 +24,13 @@ const stylesByVariant: Record<StatusVariant, Record<string, string>> = {
   project: {
     active: "border-blue-500/40 bg-blue-500/10 text-blue-300",
     archived: "border-snap-border bg-snap-bg text-snap-textDim",
+  },
+  access: {
+    edit: "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    "view only": "border-snap-border bg-snap-bg text-snap-textDim",
+    // Spanish locale variants
+    "edición": "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    "solo lectura": "border-snap-border bg-snap-bg text-snap-textDim",
   },
 };
 

@@ -234,6 +234,7 @@
     "addingCategory": "Adding...",
     "confirmMapping": "Confirm Mapping",
     "saveInvoice": "Save Invoice",
+    "viewOnlyNotice": "You have view-only access. Contact your admin to make changes.",
     "currencyOptions": {
       "USD": "USD - US Dollar",
       "ARS": "ARS - Argentine Peso",
@@ -307,7 +308,11 @@
     "failedUpdateUser": "Failed to update user.",
     "updated": "User updated.",
     "failedUpdateStatus": "Failed to update user status.",
-    "removing": "Removing..."
+    "removing": "Removing...",
+    "accessLevel": "Access Level",
+    "edit": "Edit",
+    "viewOnly": "View Only",
+    "access": "Access"
   },
   "categories": {
     "title": "Categories",

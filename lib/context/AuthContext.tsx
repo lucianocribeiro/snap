@@ -15,6 +15,8 @@ type AuthContextValue = {
   organizationName: string | null;
   hasDualAccess: boolean;
   activeContext: ActiveContext;
+  accessLevel: "edit" | "view_only";
+  canEdit: boolean;
   switchContext: (nextContext: ActiveContext) => void;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -62,17 +64,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [hasDualAccess, setHasDualAccess] = useState(false);
   const [activeContext, setActiveContext] = useState<ActiveContext>("org_admin");
+  const [accessLevel, setAccessLevel] = useState<"edit" | "view_only">("edit");
 
   const loadProfile = useCallback(
     async (userId: string) => {
       const { data } = await supabase
         .from("user_profiles")
-        .select("role, organization_id")
+        .select("role, organization_id, access_level")
         .eq("id", userId)
         .maybeSingle();
 
       const nextRole = (data?.role as UserRole) ?? null;
       const nextOrganizationId = data?.organization_id ?? null;
+      const rawAccessLevel = (data?.access_level as string | null) ?? "edit";
+      const nextAccessLevel: "edit" | "view_only" =
+        nextRole === "org_admin" || nextRole === "super_admin"
+          ? "edit"
+          : rawAccessLevel === "view_only"
+            ? "view_only"
+            : "edit";
+      setAccessLevel(nextAccessLevel);
 
       setOrganizationId(nextOrganizationId);
 
@@ -137,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOrganizationName(null);
         setHasDualAccess(false);
         setActiveContext("org_admin");
+        setAccessLevel("edit");
         clearActiveContextCookie();
         return;
       }
@@ -167,9 +179,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganizationName(null);
     setHasDualAccess(false);
     setActiveContext("org_admin");
+    setAccessLevel("edit");
     clearActiveContextCookie();
     router.push("/login");
   }, [router, supabase]);
+
+  const canEdit = accessLevel === "edit";
 
   const value = useMemo(
     () => ({
@@ -179,11 +194,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organizationName,
       hasDualAccess,
       activeContext,
+      accessLevel,
+      canEdit,
       switchContext,
       refreshProfile,
       signOut,
     }),
-    [activeContext, hasDualAccess, organizationId, organizationName, refreshProfile, signOut, switchContext, user, userRole],
+    [accessLevel, activeContext, canEdit, hasDualAccess, organizationId, organizationName, refreshProfile, signOut, switchContext, user, userRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

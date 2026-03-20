@@ -288,6 +288,7 @@
     "remove": "Eliminar",
     "removeUser": "Eliminar usuario",
     "removeDescriptionSuffix": "de la plataforma. Sus facturas cargadas permanecerán. Esto no se puede deshacer.",
+    "removeDescription": "Esto eliminará permanentemente a {name} de la plataforma. Sus facturas cargadas permanecerán. Esto no se puede deshacer.",
     "userName": "Nombre de usuario",
     "editUser": "Editar usuario",
     "editDescription": "Actualiza detalles del perfil, rol y estado.",

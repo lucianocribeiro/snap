@@ -354,8 +354,10 @@ export default function UsersPage() {
     if (!removeUser) return;
     setRemoveSubmitting(true);
 
-    const response = await fetch(`/api/users/${removeUser.id}/remove`, {
-      method: "DELETE",
+    const response = await fetch("/api/admin/delete-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: removeUser.id }),
     });
 
     const result = (await response.json().catch(() => ({}))) as { error?: string };
@@ -366,10 +368,10 @@ export default function UsersPage() {
       return;
     }
 
+    setUsers((previous) => previous.filter((user) => user.id !== removeUser.id));
     setRemoveSubmitting(false);
     setRemoveUser(null);
     setToast(t("users.removed"));
-    await loadUsers();
   };
 
   return (
@@ -735,9 +737,11 @@ export default function UsersPage() {
       <ConfirmModal
         open={Boolean(removeUser)}
         title={t("users.removeUser")}
-        description={`This will permanently remove [${
-          removeUser ? [removeUser.firstName, removeUser.lastName].filter(Boolean).join(" ") || removeUser.email : t("users.userName")
-        }] ${t("users.removeDescriptionSuffix")}`}
+        description={t("users.removeDescription", {
+          name: removeUser
+            ? [removeUser.firstName, removeUser.lastName].filter(Boolean).join(" ") || removeUser.email
+            : t("users.userName"),
+        })}
         confirmLabel={removeSubmitting ? t("users.removing") : t("users.remove")}
         destructive
         onCancel={() => {

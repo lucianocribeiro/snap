@@ -288,6 +288,7 @@
     "remove": "Remove",
     "removeUser": "Remove User",
     "removeDescriptionSuffix": "from the platform. Their uploaded invoices will remain. This cannot be undone.",
+    "removeDescription": "This will permanently remove {name} from the platform. Their uploaded invoices will remain. This cannot be undone.",
     "userName": "User Name",
     "editUser": "Edit User",
     "editDescription": "Update profile details, role, and status.",

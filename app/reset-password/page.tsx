@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -34,6 +34,7 @@ function getStrengthLabel(score: number, t: (key: string) => string) {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const { t } = useLanguage();
   const [password, setPassword] = useState("");
@@ -45,6 +46,46 @@ export default function ResetPasswordPage() {
     password: false,
     confirmPassword: false,
   });
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
+
+  useEffect(() => {
+    async function exchangeToken() {
+      const code = searchParams.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setSessionError(true);
+        } else {
+          setSessionReady(true);
+        }
+        return;
+      }
+
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.slice(1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) {
+            setSessionError(true);
+          } else {
+            setSessionReady(true);
+          }
+          return;
+        }
+      }
+
+      setSessionError(true);
+    }
+
+    exchangeToken();
+  }, [supabase, searchParams]);
 
   const strength = useMemo(() => getStrengthLevel(password), [password]);
 
@@ -71,6 +112,31 @@ export default function ResetPasswordPage() {
 
     router.replace("/login?reset=success");
   };
+
+  if (!sessionReady && !sessionError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">
+        <AuthCard title={t("auth.resetPassword")} description={t("auth.resetPasswordDescription")}>
+          <div className="flex justify-center py-6">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-snap-border border-t-snap-textMain" />
+          </div>
+        </AuthCard>
+      </main>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">
+        <AuthCard title={t("auth.resetPassword")} description={t("auth.resetPasswordDescription")}>
+          <p className="text-sm text-snap-textDim">{t("auth.errors.invalidOrExpiredLink")}</p>
+          <Link href="/forgot-password" className="mt-4 block text-sm text-snap-textMain underline">
+            {t("auth.requestNewLink")}
+          </Link>
+        </AuthCard>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-snap-bg p-4">

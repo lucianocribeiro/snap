@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -32,7 +32,7 @@ function getStrengthLabel(score: number, t: (key: string) => string) {
   return t("auth.strong");
 }
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
@@ -229,5 +229,13 @@ export default function ResetPasswordPage() {
         </form>
       </AuthCard>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-snap-bg" />}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

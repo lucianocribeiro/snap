@@ -75,7 +75,7 @@ Deno.serve(async (request) => {
       return badRequest("Unable to verify caller profile.", 403);
     }
 
-    if (callerProfile.role !== "org_admin") {
+    if (callerProfile.role !== "org_admin" && callerProfile.role !== "super_admin") {
       return badRequest("Forbidden", 403);
     }
 

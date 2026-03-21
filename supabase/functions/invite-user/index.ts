@@ -90,6 +90,9 @@ Deno.serve(async (request) => {
         role: "user",
         organization_id: organizationId,
       },
+      options: {
+        redirectTo: "https://snap-sand-xi.vercel.app/reset-password",
+      },
     });
 
     if (inviteError || !inviteData.user) {

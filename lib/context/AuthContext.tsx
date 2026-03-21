@@ -13,6 +13,8 @@ type AuthContextValue = {
   userRole: UserRole;
   organizationId: string | null;
   organizationName: string | null;
+  firstName: string | null;
+  lastName: string | null;
   hasDualAccess: boolean;
   activeContext: ActiveContext;
   accessLevel: "edit" | "view_only";
@@ -62,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [lastName, setLastName] = useState<string | null>(null);
   const [hasDualAccess, setHasDualAccess] = useState(false);
   const [activeContext, setActiveContext] = useState<ActiveContext>("org_admin");
   const [accessLevel, setAccessLevel] = useState<"edit" | "view_only">("edit");
@@ -70,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (userId: string) => {
       const { data } = await supabase
         .from("user_profiles")
-        .select("role, organization_id, access_level")
+        .select("role, organization_id, access_level, first_name, last_name")
         .eq("id", userId)
         .maybeSingle();
 
@@ -84,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? "view_only"
             : "edit";
       setAccessLevel(nextAccessLevel);
+      setFirstName((data?.first_name as string | null) ?? null);
+      setLastName((data?.last_name as string | null) ?? null);
 
       setOrganizationId(nextOrganizationId);
 
@@ -146,6 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
         setOrganizationId(null);
         setOrganizationName(null);
+        setFirstName(null);
+        setLastName(null);
         setHasDualAccess(false);
         setActiveContext("org_admin");
         setAccessLevel("edit");
@@ -177,6 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRole(null);
     setOrganizationId(null);
     setOrganizationName(null);
+    setFirstName(null);
+    setLastName(null);
     setHasDualAccess(false);
     setActiveContext("org_admin");
     setAccessLevel("edit");
@@ -192,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userRole,
       organizationId,
       organizationName,
+      firstName,
+      lastName,
       hasDualAccess,
       activeContext,
       accessLevel,
@@ -200,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       signOut,
     }),
-    [accessLevel, activeContext, canEdit, hasDualAccess, organizationId, organizationName, refreshProfile, signOut, switchContext, user, userRole],
+    [accessLevel, activeContext, canEdit, firstName, hasDualAccess, lastName, organizationId, organizationName, refreshProfile, signOut, switchContext, user, userRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

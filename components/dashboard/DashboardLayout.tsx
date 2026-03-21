@@ -139,7 +139,7 @@ function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
 
 export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, userRole, activeContext, signOut } = useAuth();
+  const { user, userRole, activeContext, firstName, lastName, signOut } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -211,6 +211,9 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              <span className="text-sm text-snap-textDim">
+                {firstName && lastName ? `${firstName} ${lastName}` : (user?.email ?? "")}
+              </span>
               <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
                 {(["en", "es"] as const).map((lang) => (
                   <button

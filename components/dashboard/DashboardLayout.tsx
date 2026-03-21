@@ -242,13 +242,6 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
               {dropdownOpen ? (
                 <div className="absolute right-0 top-11 w-44 overflow-hidden rounded-md border border-snap-border bg-snap-bgSecondary shadow-lg">
                   <Link
-                    href="/profile"
-                    onClick={() => setDropdownOpen(false)}
-                    className="block px-3 py-2 text-sm text-snap-textDim transition hover:bg-snap-bgDeep hover:text-snap-textMain"
-                  >
-                    {t("nav.profile")}
-                  </Link>
-                  <Link
                     href="/settings"
                     onClick={() => setDropdownOpen(false)}
                     className="block px-3 py-2 text-sm text-snap-textDim transition hover:bg-snap-bgDeep hover:text-snap-textMain"

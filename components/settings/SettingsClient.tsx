@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -30,6 +30,10 @@ export function SettingsClient() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordMismatch, setPasswordMismatch] = useState<string | null>(null);
+
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const [organizationSubmitting, setOrganizationSubmitting] = useState(false);
   const [profileSubmitting, setProfileSubmitting] = useState(false);
@@ -94,7 +98,7 @@ export function SettingsClient() {
       if (showOrgTab && organizationId) {
         const { data: organization, error: organizationError } = await supabase
           .from("organizations")
-          .select("name")
+          .select("name, logo_url")
           .eq("id", organizationId)
           .maybeSingle();
 
@@ -102,6 +106,7 @@ export function SettingsClient() {
           setError(t("settings.failedLoadOrganization"));
         } else {
           setOrganizationName(organization?.name ?? "");
+          setLogoUrl((organization?.logo_url as string | null | undefined) ?? null);
         }
       }
 
@@ -110,6 +115,56 @@ export function SettingsClient() {
 
     void loadSettings();
   }, [showOrgTab, organizationId, supabase, t]);
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    setLogoError(null);
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setLogoError(t("settings.logoInvalidType"));
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setLogoError(t("settings.logoFileTooLarge"));
+      return;
+    }
+    if (!organizationId) {
+      setError(t("users.orgNotFound"));
+      return;
+    }
+
+    setLogoUploading(true);
+    const path = `${organizationId}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("org-logos")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setLogoError(uploadError.message);
+      setLogoUploading(false);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from("org-logos").getPublicUrl(path);
+    const publicUrl = publicUrlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from("organizations")
+      .update({ logo_url: publicUrl })
+      .eq("id", organizationId);
+
+    if (updateError) {
+      setLogoError(updateError.message);
+      setLogoUploading(false);
+      return;
+    }
+
+    setLogoUrl(publicUrl);
+    setLogoUploading(false);
+    setToast(t("settings.logoUpdated"));
+    event.target.value = "";
+  };
 
   const saveOrganization = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -269,6 +324,39 @@ export function SettingsClient() {
               {organizationSubmitting ? t("settings.saving") : t("common.save")}
             </button>
           </form>
+
+          {userRole === "org_admin" ? (
+            <div className="mt-8 border-t border-snap-border pt-6">
+              <h3 className="text-base font-semibold text-snap-textMain">{t("settings.logoTitle")}</h3>
+              <div className="mt-4 space-y-3">
+                <div>
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={t("settings.logoTitle")}
+                      style={{ height: 48, objectFit: "contain" }}
+                      className="rounded"
+                    />
+                  ) : (
+                    <p className="text-sm text-snap-textDim">{t("settings.noLogo")}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={handleLogoUpload}
+                    disabled={logoUploading}
+                    className="text-sm text-snap-textDim file:mr-3 file:rounded-md file:border file:border-snap-border file:bg-snap-card file:px-3 file:py-1 file:text-sm file:text-snap-textMain file:hover:bg-snap-bg disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                  <p className="text-xs text-snap-textDim">{t("settings.logoHelper")}</p>
+                  {logoError ? (
+                    <p className="text-xs text-red-300">{logoError}</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 

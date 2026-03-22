@@ -381,7 +381,14 @@
     "failedSaveOrganization": "Failed to save organization settings.",
     "failedSaveProfile": "Failed to save profile.",
     "organizationUpdated": "Organization updated.",
-    "profileUpdated": "Profile updated."
+    "profileUpdated": "Profile updated.",
+    "logoTitle": "Organization Logo",
+    "noLogo": "No logo uploaded",
+    "logoHelper": "PNG or JPG. Max 1MB.",
+    "uploadLogo": "Upload Logo",
+    "logoFileTooLarge": "File must be under 1MB.",
+    "logoInvalidType": "Only PNG or JPG files are allowed.",
+    "logoUpdated": "Logo updated successfully."
   },
   "superAdmin": {
     "title": "Super Admin",

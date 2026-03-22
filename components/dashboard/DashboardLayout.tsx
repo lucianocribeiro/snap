@@ -7,6 +7,7 @@ import { ChevronDown, Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { createClient } from "@/lib/supabase/client";
 
 type DashboardLayoutProps = {
   pageTitle: string;
@@ -139,11 +140,14 @@ function ContextSwitcher({ onSwitch }: { onSwitch?: () => void }) {
 
 export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, userRole, activeContext, firstName, lastName, signOut } = useAuth();
+  const { user, userRole, activeContext, firstName, lastName, signOut, organizationId, organizationName } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const supabase = useMemo(() => createClient(), []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
+  const [orgLogoVisible, setOrgLogoVisible] = useState(true);
 
   const effectiveRole = useMemo(() => {
     if (!userRole) return null;
@@ -165,6 +169,26 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   useEffect(() => {
     window.localStorage.setItem("snap.sidebarCollapsed", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!organizationId || (userRole === "super_admin" && activeContext === "super_admin")) {
+      setOrgLogoUrl(null);
+      return;
+    }
+    const fetchLogo = async () => {
+      const { data } = await supabase
+        .from("organizations")
+        .select("logo_url")
+        .eq("id", organizationId)
+        .maybeSingle();
+      setOrgLogoUrl((data?.logo_url as string | null | undefined) ?? null);
+      setOrgLogoVisible(true);
+    };
+    void fetchLogo();
+  }, [organizationId, userRole, activeContext, supabase]);
+
+  const showOrgBranding =
+    !(userRole === "super_admin" && activeContext === "super_admin") && Boolean(organizationId);
 
   return (
     <div className="min-h-screen bg-snap-bgDeep text-snap-textMain md:flex">
@@ -208,6 +232,21 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-semibold text-snap-textMain">{pageTitle}</h1>
+              {showOrgBranding ? (
+                <div className="flex items-center gap-2">
+                  {orgLogoUrl && orgLogoVisible ? (
+                    <img
+                      src={orgLogoUrl}
+                      alt={organizationName ?? ""}
+                      style={{ height: 28, objectFit: "contain" }}
+                      onError={() => setOrgLogoVisible(false)}
+                    />
+                  ) : null}
+                  {organizationName ? (
+                    <span className="text-sm text-snap-textDim">{organizationName}</span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex items-center gap-3">

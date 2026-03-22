@@ -380,7 +380,14 @@
     "failedSaveOrganization": "No se pudo guardar la configuración de la organización.",
     "failedSaveProfile": "No se pudo guardar el perfil.",
     "organizationUpdated": "Organización actualizada.",
-    "profileUpdated": "Perfil actualizado."
+    "profileUpdated": "Perfil actualizado.",
+    "logoTitle": "Logo de la organización",
+    "noLogo": "No hay logo cargado",
+    "logoHelper": "PNG o JPG. Máximo 1MB.",
+    "uploadLogo": "Subir logo",
+    "logoFileTooLarge": "El archivo debe pesar menos de 1MB.",
+    "logoInvalidType": "Solo se permiten archivos PNG o JPG.",
+    "logoUpdated": "Logo actualizado correctamente."
   },
   "superAdmin": {
     "title": "Super Admin",

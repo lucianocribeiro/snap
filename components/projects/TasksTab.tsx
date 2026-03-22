@@ -23,6 +23,7 @@ type ProjectInvoice = {
 
 type Task = {
   id: string;
+  title: string;
   description: string;
   status: "open" | "in_progress" | "pending_approval" | "done";
   assignedTo: string | null;
@@ -48,6 +49,7 @@ type TasksTabProps = {
 };
 
 const EMPTY_FORM = {
+  title: "",
   description: "",
   assignedTo: "",
   invoiceId: "",
@@ -109,7 +111,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
         supabase
           .from("tasks")
           .select(
-            `id, description, status, assigned_to, created_by, invoice_id, created_at,
+            `id, title, description, status, assigned_to, created_by, invoice_id, created_at,
              assignee:user_profiles!tasks_assigned_to_fkey(first_name, last_name),
              creator:user_profiles!tasks_created_by_fkey(first_name, last_name)`,
           )
@@ -135,6 +137,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
           const inv = invoiceRows?.find((i) => i.id === row["invoice_id"]);
           return {
             id: row["id"] as string,
+            title: (row["title"] as string | null) ?? "",
             description: row["description"] as string,
             status: row["status"] as "open" | "in_progress" | "pending_approval" | "done",
             assignedTo: (row["assigned_to"] as string | null) ?? null,
@@ -180,6 +183,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
 
   function handleTaskSaved(updated: {
     id: string;
+    title: string;
     description: string;
     status: "open" | "in_progress" | "pending_approval" | "done";
     assignedTo: string | null;
@@ -193,7 +197,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
   }
 
   async function handleCreate() {
-    if (!form.description.trim() || !form.assignedTo) return;
+    if (!form.title.trim() || !form.description.trim() || !form.assignedTo) return;
     if (!user?.id) return;
     setSaving(true);
 
@@ -201,13 +205,14 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
       .from("tasks")
       .insert({
         project_id: projectId,
+        title: form.title.trim(),
         description: form.description.trim(),
         assigned_to: form.assignedTo || null,
         invoice_id: form.invoiceId || null,
         created_by: user.id,
       })
       .select(
-        `id, description, status, assigned_to, created_by, invoice_id, created_at,
+        `id, title, description, status, assigned_to, created_by, invoice_id, created_at,
          assignee:user_profiles!tasks_assigned_to_fkey(first_name, last_name),
          creator:user_profiles!tasks_created_by_fkey(first_name, last_name)`,
       )
@@ -223,6 +228,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
 
     const newTask: Task = {
       id: row["id"] as string,
+      title: (row["title"] as string | null) ?? "",
       description: row["description"] as string,
       status: row["status"] as "open" | "in_progress" | "pending_approval" | "done",
       assignedTo: (row["assigned_to"] as string | null) ?? null,
@@ -418,7 +424,12 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
               >
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-4">
-                  <p className="text-sm text-snap-textMain">{task.description}</p>
+                  <div className="space-y-0.5">
+                    {task.title ? (
+                      <p className="text-sm font-bold text-snap-textMain">{task.title}</p>
+                    ) : null}
+                    <p className="text-sm text-snap-textMain">{task.description}</p>
+                  </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {isAdmin ? (
                       <button
@@ -567,6 +578,16 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
             <h3 className="text-lg font-semibold text-snap-textMain">{t("tasks.newTask")}</h3>
 
             <div className="space-y-1">
+              <label className="text-xs text-snap-textDim">{t("tasks.taskTitle")} *</label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1">
               <label className="text-xs text-snap-textDim">{t("tasks.description")} *</label>
               <textarea
                 rows={3}
@@ -619,7 +640,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
               <button
                 type="button"
                 onClick={() => void handleCreate()}
-                disabled={saving || !form.description.trim() || !form.assignedTo}
+                disabled={saving || !form.title.trim() || !form.description.trim() || !form.assignedTo}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg disabled:opacity-50"
               >
                 {saving ? t("common.loading") : t("common.save")}
@@ -633,6 +654,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
       {editingTaskId ? (
         <TaskEditModal
           taskId={editingTaskId}
+          isAdmin={isAdmin}
           onClose={() => setEditingTaskId(null)}
           onSaved={handleTaskSaved}
         />

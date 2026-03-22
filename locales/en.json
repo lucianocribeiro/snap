@@ -558,7 +558,8 @@
     "addComment": "Add a comment...",
     "postComment": "Post",
     "noComments": "No comments yet",
-    "statusPendingApproval": "Pending Approval"
+    "statusPendingApproval": "Pending Approval",
+    "taskTitle": "Task Title"
   },
   "confidence": {
     "high": "High confidence",

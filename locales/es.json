@@ -557,7 +557,8 @@
     "addComment": "Agregar un comentario...",
     "postComment": "Publicar",
     "noComments": "Sin comentarios aún",
-    "statusPendingApproval": "Pendiente de aprobación"
+    "statusPendingApproval": "Pendiente de aprobación",
+    "taskTitle": "Título de la tarea"
   },
   "confidence": {
     "high": "Alta confianza",

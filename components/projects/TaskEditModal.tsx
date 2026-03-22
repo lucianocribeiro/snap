@@ -19,6 +19,7 @@ type ProjectInvoice = {
 
 type TaskData = {
   id: string;
+  title: string;
   description: string;
   status: "open" | "in_progress" | "pending_approval" | "done";
   assignedTo: string | null;
@@ -31,6 +32,7 @@ type TaskData = {
 
 type SavedTask = {
   id: string;
+  title: string;
   description: string;
   status: "open" | "in_progress" | "pending_approval" | "done";
   assignedTo: string | null;
@@ -41,11 +43,12 @@ type SavedTask = {
 
 type TaskEditModalProps = {
   taskId: string;
+  isAdmin?: boolean;
   onClose: () => void;
   onSaved: (updated: SavedTask) => void;
 };
 
-export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) {
+export function TaskEditModal({ taskId, isAdmin = false, onClose, onSaved }: TaskEditModalProps) {
   const supabase = useMemo(() => createClient(), []);
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -55,6 +58,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
   const [invoices, setInvoices] = useState<ProjectInvoice[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
@@ -71,7 +75,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
 
       const { data: taskRow } = await supabase
         .from("tasks")
-        .select("id, description, status, assigned_to, invoice_id, project_id, organization_id")
+        .select("id, title, description, status, assigned_to, invoice_id, project_id, organization_id")
         .eq("id", taskId)
         .maybeSingle();
 
@@ -114,6 +118,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
 
       const taskData: TaskData = {
         id: taskRow.id as string,
+        title: (taskRow.title as string | null) ?? "",
         description: taskRow.description as string,
         status: taskRow.status as "open" | "in_progress" | "pending_approval" | "done",
         assignedTo: (taskRow.assigned_to as string | null) ?? null,
@@ -129,6 +134,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
       setTask(taskData);
       setUsers(mappedUsers);
       setInvoices(mappedInvoices);
+      setTitle(taskData.title);
       setDescription(taskData.description);
       setAssignedTo(taskData.assignedTo ?? "");
       setInvoiceId(taskData.invoiceId ?? "");
@@ -141,12 +147,13 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
   }, [taskId, supabase]);
 
   async function handleSave() {
-    if (!task || !description.trim() || !user?.id) return;
+    if (!task || !title.trim() || !description.trim() || !user?.id) return;
     setSaving(true);
 
     const { error } = await supabase
       .from("tasks")
       .update({
+        title: title.trim(),
         description: description.trim(),
         assigned_to: assignedTo || null,
         invoice_id: invoiceId || null,
@@ -175,6 +182,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
     setSaving(false);
     onSaved({
       id: task.id,
+      title: title.trim(),
       description: description.trim(),
       status,
       assignedTo: assignedTo || null,
@@ -205,6 +213,16 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
         ) : (
           <div className="space-y-5">
             <h3 className="text-lg font-semibold text-snap-textMain">{t("tasks.editTask")}</h3>
+
+            <div className="space-y-1">
+              <label className="text-xs text-snap-textDim">{t("tasks.taskTitle")} *</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
+              />
+            </div>
 
             <div className="space-y-1">
               <label className="text-xs text-snap-textDim">{t("tasks.description")} *</label>
@@ -258,7 +276,9 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
                 <option value="open">{t("tasks.statusOpen")}</option>
                 <option value="in_progress">{t("tasks.statusInProgress")}</option>
                 <option value="pending_approval">{t("tasks.statusPendingApproval")}</option>
-                <option value="done">{t("tasks.statusDone")}</option>
+                {isAdmin ? (
+                  <option value="done">{t("tasks.statusDone")}</option>
+                ) : null}
               </select>
             </div>
 
@@ -286,7 +306,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={saving || !description.trim()}
+                disabled={saving || !title.trim() || !description.trim()}
                 className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg disabled:opacity-50"
               >
                 {saving ? t("common.loading") : t("common.save")}

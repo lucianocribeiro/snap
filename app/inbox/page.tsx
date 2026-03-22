@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { TaskEditModal } from "@/components/projects/TaskEditModal";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -16,6 +17,8 @@ type Notification = {
   body: string;
   read: boolean;
   relatedTaskId: string | null;
+  taskDescription: string | null;
+  taskStatus: string | null;
   createdAt: string;
 };
 
@@ -30,7 +33,13 @@ function timeAgo(dateStr: string): string {
   return `${days}d`;
 }
 
-const TASK_TYPES = new Set(["task_assigned", "task_updated"]);
+const TASK_TYPES = new Set([
+  "task_assigned",
+  "task_updated",
+  "task_pending_approval",
+  "task_approved",
+  "task_denied",
+]);
 
 export default function InboxPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -41,6 +50,14 @@ export default function InboxPage() {
   const [loading, setLoading] = useState(true);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
+  function statusLabel(status: string): string {
+    if (status === "open") return t("tasks.statusOpen");
+    if (status === "in_progress") return t("tasks.statusInProgress");
+    if (status === "pending_approval") return t("tasks.statusPendingApproval");
+    if (status === "done") return t("tasks.statusDone");
+    return status;
+  }
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -48,20 +65,28 @@ export default function InboxPage() {
       setLoading(true);
       const { data } = await supabase
         .from("notifications")
-        .select("id, type, title, body, read, related_task_id, created_at")
+        .select(
+          `id, type, title, body, read, related_task_id, created_at,
+           task:tasks!notifications_related_task_id_fkey(description, status)`,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       setNotifications(
-        ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-          id: row["id"] as string,
-          type: row["type"] as string,
-          title: row["title"] as string,
-          body: row["body"] as string,
-          read: row["read"] as boolean,
-          relatedTaskId: (row["related_task_id"] as string | null) ?? null,
-          createdAt: row["created_at"] as string,
-        })),
+        ((data ?? []) as Record<string, unknown>[]).map((row) => {
+          const task = row["task"] as { description: string; status: string } | null;
+          return {
+            id: row["id"] as string,
+            type: row["type"] as string,
+            title: row["title"] as string,
+            body: row["body"] as string,
+            read: row["read"] as boolean,
+            relatedTaskId: (row["related_task_id"] as string | null) ?? null,
+            taskDescription: task?.description ?? null,
+            taskStatus: task?.status ?? null,
+            createdAt: row["created_at"] as string,
+          };
+        }),
       );
       setLoading(false);
     };
@@ -138,7 +163,7 @@ export default function InboxPage() {
                         n.read ? "bg-transparent" : "bg-blue-400",
                       ].join(" ")}
                     />
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 space-y-1.5">
                       <p
                         className={[
                           "text-sm",
@@ -147,8 +172,24 @@ export default function InboxPage() {
                       >
                         {n.title}
                       </p>
+
+                      {/* Task name + status badge */}
+                      {isTaskNotif && n.taskDescription ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {n.taskStatus ? (
+                            <StatusBadge
+                              status={statusLabel(n.taskStatus)}
+                              variant="task"
+                            />
+                          ) : null}
+                          <span className="text-xs text-snap-textMain line-clamp-1">
+                            {n.taskDescription}
+                          </span>
+                        </div>
+                      ) : null}
+
                       <p className="text-sm text-snap-textDim">{n.body}</p>
-                      <div className="flex items-center gap-3 pt-1">
+                      <div className="flex items-center gap-3 pt-0.5">
                         <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
                         {isTaskNotif ? (
                           <button

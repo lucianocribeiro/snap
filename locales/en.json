@@ -11,7 +11,8 @@
     "superAdmin": "Super Admin",
     "profile": "Profile",
     "language": "Language",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "tasks": "Tasks"
   },
   "auth": {
     "signIn": "Sign In",
@@ -509,6 +510,27 @@
     "navigation": "Navigation",
     "cannotBeUndone": "This action cannot be undone.",
     "dismiss": "Dismiss"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "empty": "No tasks yet",
+    "unassigned": "Unassigned",
+    "selectAssignee": "Select a user",
+    "noInvoice": "No invoice linked",
+    "created": "Task created",
+    "updated": "Task updated",
+    "deleted": "Task deleted",
+    "newTask": "New Task",
+    "editTask": "Edit Task",
+    "description": "Description",
+    "assignTo": "Assign to",
+    "linkInvoice": "Link invoice",
+    "status": "Status",
+    "statusOpen": "Open",
+    "statusInProgress": "In Progress",
+    "statusDone": "Done",
+    "createdBy": "Created by",
+    "deleteConfirm": "This will permanently delete this task. This cannot be undone."
   },
   "confidence": {
     "high": "High confidence",

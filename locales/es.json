@@ -11,7 +11,8 @@
     "superAdmin": "Super Admin",
     "profile": "Perfil",
     "language": "Idioma",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "tasks": "Tareas"
   },
   "auth": {
     "signIn": "Iniciar sesión",
@@ -508,6 +509,27 @@
     "navigation": "Navegación",
     "cannotBeUndone": "Esta acción no se puede deshacer.",
     "dismiss": "Cerrar"
+  },
+  "tasks": {
+    "title": "Tareas",
+    "empty": "No hay tareas aún",
+    "unassigned": "Sin asignar",
+    "selectAssignee": "Seleccionar usuario",
+    "noInvoice": "Sin factura vinculada",
+    "created": "Tarea creada",
+    "updated": "Tarea actualizada",
+    "deleted": "Tarea eliminada",
+    "newTask": "Nueva tarea",
+    "editTask": "Editar tarea",
+    "description": "Descripción",
+    "assignTo": "Asignar a",
+    "linkInvoice": "Vincular factura",
+    "status": "Estado",
+    "statusOpen": "Abierta",
+    "statusInProgress": "En progreso",
+    "statusDone": "Completada",
+    "createdBy": "Creado por",
+    "deleteConfirm": "Esto eliminará permanentemente esta tarea. No se puede deshacer."
   },
   "confidence": {
     "high": "Alta confianza",

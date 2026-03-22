@@ -8,6 +8,7 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import type { PeriodType, ProjectColumn } from "@/components/dashboard/types";
 import { InvoicesTable, type InvoiceTableRow } from "@/components/invoices/InvoicesTable";
 import { PROJECT_COLUMN_LABELS } from "@/components/projects/constants";
+import { TasksTab } from "@/components/projects/TasksTab";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -16,10 +17,11 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-type TabKey = "overview" | "invoices" | "dashboard" | "reports";
+type TabKey = "overview" | "invoices" | "dashboard" | "reports" | "tasks";
 
 type ProjectDetailState = {
   id: string;
+  organizationId: string;
   name: string;
   description: string;
   periodType: PeriodType;
@@ -71,7 +73,7 @@ export default function ProjectDetailPage() {
         await Promise.all([
           supabase
             .from("projects")
-            .select("id, name, description, period_type, selected_columns, custom_column_labels, status")
+            .select("id, organization_id, name, description, period_type, selected_columns, custom_column_labels, status")
             .eq("id", projectId)
             .maybeSingle(),
           supabase
@@ -96,6 +98,7 @@ export default function ProjectDetailPage() {
 
       setProject({
         id: projectRow.id,
+        organizationId: projectRow.organization_id,
         name: projectRow.name,
         description: projectRow.description ?? "",
         periodType: (projectRow.period_type as PeriodType) ?? "Monthly",
@@ -196,6 +199,7 @@ export default function ProjectDetailPage() {
             ["invoices", t("nav.invoices")],
             ["dashboard", t("nav.dashboard")],
             ["reports", t("nav.reports")],
+            ["tasks", t("nav.tasks")],
           ] as Array<[TabKey, string]>).map(([key, label]) => (
             <button
               key={key}
@@ -303,6 +307,10 @@ export default function ProjectDetailPage() {
               {t("nav.reports")}
             </Link>
           </section>
+        ) : null}
+
+        {!loading && project && activeTab === "tasks" ? (
+          <TasksTab projectId={project.id} organizationId={project.organizationId} />
         ) : null}
       </div>
 

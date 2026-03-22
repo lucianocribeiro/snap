@@ -212,7 +212,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
       ) : null}
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-30 h-16 border-b border-snap-border bg-snap-bgDeep">
+        <header className="relative sticky top-0 z-30 h-16 border-b border-snap-border bg-snap-bgDeep">
           <div className="flex h-full items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
               <button
@@ -232,22 +232,23 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="text-xl font-semibold text-snap-textMain">{pageTitle}</h1>
-              {showOrgBranding ? (
-                <div className="flex items-center gap-2">
-                  {orgLogoUrl && orgLogoVisible ? (
-                    <img
-                      src={orgLogoUrl}
-                      alt={organizationName ?? ""}
-                      style={{ height: 28, objectFit: "contain" }}
-                      onError={() => setOrgLogoVisible(false)}
-                    />
-                  ) : null}
-                  {organizationName ? (
-                    <span className="text-sm text-snap-textDim">{organizationName}</span>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
+
+            {showOrgBranding ? (
+              <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2">
+                {orgLogoUrl && orgLogoVisible ? (
+                  <img
+                    src={orgLogoUrl}
+                    alt={organizationName ?? ""}
+                    style={{ height: 28, objectFit: "contain" }}
+                    onError={() => setOrgLogoVisible(false)}
+                  />
+                ) : null}
+                {organizationName ? (
+                  <span className="text-sm text-snap-textDim">{organizationName}</span>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="flex items-center gap-3">
               <span className="text-sm text-snap-textDim">

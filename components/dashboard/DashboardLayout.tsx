@@ -25,7 +25,6 @@ const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
     { href: "/projects", labelKey: "nav.projects" },
     { href: "/invoices", labelKey: "nav.invoices" },
     { href: "/reports", labelKey: "nav.reports" },
-    { href: "/inbox", labelKey: "nav.inbox" },
     { href: "/users", labelKey: "nav.users" },
     { href: "/categories", labelKey: "nav.categories" },
     { href: "/settings", labelKey: "nav.settings" },
@@ -35,7 +34,6 @@ const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
     { href: "/projects", labelKey: "nav.projects" },
     { href: "/invoices", labelKey: "nav.invoices" },
     { href: "/reports", labelKey: "nav.reports" },
-    { href: "/inbox", labelKey: "nav.inbox" },
     { href: "/settings", labelKey: "nav.settings" },
   ],
   super_admin: [

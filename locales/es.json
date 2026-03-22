@@ -546,7 +546,18 @@
     "createdBy": "Creado por",
     "deleteConfirm": "Esto eliminará permanentemente esta tarea. No se puede deshacer.",
     "commentOnStatusChange": "Comentar sobre este cambio de estado",
-    "commentPlaceholder": "Agrega un comentario sobre este cambio..."
+    "commentPlaceholder": "Agrega un comentario sobre este cambio...",
+    "submittedForApproval": "Tarea enviada para aprobación",
+    "taskApproved": "Tarea aprobada",
+    "taskDenied": "Tarea devuelta para revisión",
+    "submitForApproval": "Enviar para aprobación",
+    "approve": "Aprobar",
+    "deny": "Rechazar",
+    "comments": "Comentarios",
+    "addComment": "Agregar un comentario...",
+    "postComment": "Publicar",
+    "noComments": "Sin comentarios aún",
+    "statusPendingApproval": "Pendiente de aprobación"
   },
   "confidence": {
     "high": "Alta confianza",

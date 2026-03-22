@@ -20,7 +20,7 @@ type ProjectInvoice = {
 type TaskData = {
   id: string;
   description: string;
-  status: "open" | "in_progress" | "done";
+  status: "open" | "in_progress" | "pending_approval" | "done";
   assignedTo: string | null;
   assignedToName: string | null;
   invoiceId: string | null;
@@ -32,7 +32,7 @@ type TaskData = {
 type SavedTask = {
   id: string;
   description: string;
-  status: "open" | "in_progress" | "done";
+  status: "open" | "in_progress" | "pending_approval" | "done";
   assignedTo: string | null;
   assignedToName: string | null;
   invoiceId: string | null;
@@ -58,8 +58,8 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
-  const [status, setStatus] = useState<"open" | "in_progress" | "done">("open");
-  const [originalStatus, setOriginalStatus] = useState<"open" | "in_progress" | "done">("open");
+  const [status, setStatus] = useState<"open" | "in_progress" | "pending_approval" | "done">("open");
+  const [originalStatus, setOriginalStatus] = useState<"open" | "in_progress" | "pending_approval" | "done">("open");
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -115,7 +115,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
       const taskData: TaskData = {
         id: taskRow.id as string,
         description: taskRow.description as string,
-        status: taskRow.status as "open" | "in_progress" | "done",
+        status: taskRow.status as "open" | "in_progress" | "pending_approval" | "done",
         assignedTo: (taskRow.assigned_to as string | null) ?? null,
         assignedToName: assigneeUser
           ? [assigneeUser.firstName, assigneeUser.lastName].filter(Boolean).join(" ")
@@ -165,8 +165,7 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
         task_id: task.id,
         user_id: user.id,
         organization_id: task.organizationId,
-        content: comment.trim(),
-        status_snapshot: status,
+        comment: comment.trim(),
       });
     }
 
@@ -253,11 +252,12 @@ export function TaskEditModal({ taskId, onClose, onSaved }: TaskEditModalProps) 
               <label className="text-xs text-snap-textDim">{t("tasks.status")}</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as "open" | "in_progress" | "done")}
+                onChange={(e) => setStatus(e.target.value as "open" | "in_progress" | "pending_approval" | "done")}
                 className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
               >
                 <option value="open">{t("tasks.statusOpen")}</option>
                 <option value="in_progress">{t("tasks.statusInProgress")}</option>
+                <option value="pending_approval">{t("tasks.statusPendingApproval")}</option>
                 <option value="done">{t("tasks.statusDone")}</option>
               </select>
             </div>

@@ -547,7 +547,18 @@
     "createdBy": "Created by",
     "deleteConfirm": "This will permanently delete this task. This cannot be undone.",
     "commentOnStatusChange": "Comment on this status change",
-    "commentPlaceholder": "Add a comment about this status change..."
+    "commentPlaceholder": "Add a comment about this status change...",
+    "submittedForApproval": "Task submitted for approval",
+    "taskApproved": "Task approved",
+    "taskDenied": "Task returned for revision",
+    "submitForApproval": "Submit for Approval",
+    "approve": "Approve",
+    "deny": "Deny",
+    "comments": "Comments",
+    "addComment": "Add a comment...",
+    "postComment": "Post",
+    "noComments": "No comments yet",
+    "statusPendingApproval": "Pending Approval"
   },
   "confidence": {
     "high": "High confidence",

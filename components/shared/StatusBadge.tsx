@@ -39,6 +39,8 @@ const stylesByVariant: Record<StatusVariant, Record<string, string>> = {
     "en progreso": "border-blue-500/40 bg-blue-500/10 text-blue-300",
     done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
     completada: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    "pending approval": "border-amber-400/40 bg-amber-400/10 text-yellow-400",
+    "pendiente de aprobación": "border-amber-400/40 bg-amber-400/10 text-yellow-400",
   },
 };
 

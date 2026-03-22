@@ -545,7 +545,9 @@
     "statusInProgress": "In Progress",
     "statusDone": "Done",
     "createdBy": "Created by",
-    "deleteConfirm": "This will permanently delete this task. This cannot be undone."
+    "deleteConfirm": "This will permanently delete this task. This cannot be undone.",
+    "commentOnStatusChange": "Comment on this status change",
+    "commentPlaceholder": "Add a comment about this status change..."
   },
   "confidence": {
     "high": "High confidence",

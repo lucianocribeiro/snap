@@ -4,15 +4,18 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { TaskEditModal } from "@/components/projects/TaskEditModal";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type Notification = {
   id: string;
+  type: string;
   title: string;
   body: string;
   read: boolean;
+  relatedTaskId: string | null;
   createdAt: string;
 };
 
@@ -27,6 +30,8 @@ function timeAgo(dateStr: string): string {
   return `${days}d`;
 }
 
+const TASK_TYPES = new Set(["task_assigned", "task_updated"]);
+
 export default function InboxPage() {
   const supabase = useMemo(() => createClient(), []);
   const { user } = useAuth();
@@ -34,6 +39,7 @@ export default function InboxPage() {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -42,16 +48,18 @@ export default function InboxPage() {
       setLoading(true);
       const { data } = await supabase
         .from("notifications")
-        .select("id, title, body, read, created_at")
+        .select("id, type, title, body, read, related_task_id, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       setNotifications(
         ((data ?? []) as Record<string, unknown>[]).map((row) => ({
           id: row["id"] as string,
+          type: row["type"] as string,
           title: row["title"] as string,
           body: row["body"] as string,
           read: row["read"] as boolean,
+          relatedTaskId: (row["related_task_id"] as string | null) ?? null,
           createdAt: row["created_at"] as string,
         })),
       );
@@ -76,6 +84,11 @@ export default function InboxPage() {
       .eq("user_id", user.id)
       .eq("read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
+
+  function openEditTask(n: Notification) {
+    if (!n.read) void markRead(n.id);
+    setEditingTaskId(n.relatedTaskId);
   }
 
   return (
@@ -108,37 +121,61 @@ export default function InboxPage() {
 
         {!loading && notifications.length > 0 ? (
           <ul className="space-y-2">
-            {notifications.map((n) => (
-              <li key={n.id}>
-                <button
-                  type="button"
-                  onClick={() => { if (!n.read) void markRead(n.id); }}
-                  className="flex w-full items-start gap-3 rounded-lg border border-snap-border bg-snap-surface p-4 text-left transition hover:bg-snap-bg"
-                >
-                  <span
-                    className={[
-                      "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                      n.read ? "bg-transparent" : "bg-blue-400",
-                    ].join(" ")}
-                  />
-                  <div className="flex-1 space-y-1">
-                    <p
+            {notifications.map((n) => {
+              const isTaskNotif = TASK_TYPES.has(n.type) && Boolean(n.relatedTaskId);
+              return (
+                <li key={n.id}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { if (!n.read) void markRead(n.id); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !n.read) void markRead(n.id); }}
+                    className="flex w-full cursor-pointer items-start gap-3 rounded-lg border border-snap-border bg-snap-surface p-4 text-left transition hover:bg-snap-bg"
+                  >
+                    <span
                       className={[
-                        "text-sm",
-                        n.read ? "text-snap-textMain" : "font-semibold text-snap-textMain",
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        n.read ? "bg-transparent" : "bg-blue-400",
                       ].join(" ")}
-                    >
-                      {n.title}
-                    </p>
-                    <p className="text-sm text-snap-textDim">{n.body}</p>
-                    <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
+                    />
+                    <div className="flex-1 space-y-1">
+                      <p
+                        className={[
+                          "text-sm",
+                          n.read ? "text-snap-textMain" : "font-semibold text-snap-textMain",
+                        ].join(" ")}
+                      >
+                        {n.title}
+                      </p>
+                      <p className="text-sm text-snap-textDim">{n.body}</p>
+                      <div className="flex items-center gap-3 pt-1">
+                        <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
+                        {isTaskNotif ? (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openEditTask(n); }}
+                            className="rounded-md border border-snap-border px-2 py-0.5 text-xs text-snap-textMain hover:bg-snap-bg"
+                          >
+                            {t("tasks.editTask")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </button>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </div>
+
+      {editingTaskId ? (
+        <TaskEditModal
+          taskId={editingTaskId}
+          onClose={() => setEditingTaskId(null)}
+          onSaved={() => setEditingTaskId(null)}
+        />
+      ) : null}
     </DashboardLayout>
   );
 }

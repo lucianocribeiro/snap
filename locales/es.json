@@ -544,7 +544,9 @@
     "statusInProgress": "En progreso",
     "statusDone": "Completada",
     "createdBy": "Creado por",
-    "deleteConfirm": "Esto eliminará permanentemente esta tarea. No se puede deshacer."
+    "deleteConfirm": "Esto eliminará permanentemente esta tarea. No se puede deshacer.",
+    "commentOnStatusChange": "Comentar sobre este cambio de estado",
+    "commentPlaceholder": "Agrega un comentario sobre este cambio..."
   },
   "confidence": {
     "high": "Alta confianza",

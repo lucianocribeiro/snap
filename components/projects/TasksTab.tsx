@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TaskEditModal } from "@/components/projects/TaskEditModal";
 import { useAuth } from "@/lib/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -57,7 +58,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
   const [toast, setToast] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -150,14 +151,20 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
     setCreateOpen(true);
   }
 
-  function openEdit(task: Task) {
-    setForm({
-      description: task.description,
-      assignedTo: task.assignedTo ?? "",
-      invoiceId: task.invoiceId ?? "",
-      status: task.status,
-    });
-    setEditTask(task);
+  function handleTaskSaved(updated: {
+    id: string;
+    description: string;
+    status: "open" | "in_progress" | "done";
+    assignedTo: string | null;
+    assignedToName: string | null;
+    invoiceId: string | null;
+    invoiceLabel: string | null;
+  }) {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)),
+    );
+    setEditingTaskId(null);
+    showToast(t("tasks.updated"));
   }
 
   async function handleCreate() {
@@ -209,48 +216,6 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
     setTasks((prev) => [newTask, ...prev]);
     setCreateOpen(false);
     showToast(t("tasks.created"));
-  }
-
-  async function handleUpdate() {
-    if (!editTask || !form.description.trim()) return;
-    setSaving(true);
-
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        description: form.description.trim(),
-        assigned_to: form.assignedTo || null,
-        invoice_id: form.invoiceId || null,
-        status: form.status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", editTask.id);
-
-    setSaving(false);
-    if (error) return;
-
-    const assignedUser = users.find((u) => u.id === form.assignedTo);
-    const inv = invoices.find((i) => i.id === form.invoiceId);
-
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === editTask.id
-          ? {
-              ...t,
-              description: form.description.trim(),
-              assignedTo: form.assignedTo || null,
-              assignedToName: assignedUser
-                ? [assignedUser.firstName, assignedUser.lastName].filter(Boolean).join(" ")
-                : null,
-              invoiceId: form.invoiceId || null,
-              invoiceLabel: inv ? inv.label : null,
-              status: form.status,
-            }
-          : t,
-      ),
-    );
-    setEditTask(null);
-    showToast(t("tasks.updated"));
   }
 
   async function handleDelete() {
@@ -312,7 +277,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => openEdit(task)}
+                    onClick={() => setEditingTaskId(task.id)}
                     className="rounded-md border border-snap-border px-3 py-1 text-xs text-snap-textMain hover:bg-snap-bg"
                   >
                     {t("common.edit")}
@@ -424,87 +389,12 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
       ) : null}
 
       {/* Edit Modal */}
-      {editTask ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
-          <div className="w-full max-w-md space-y-5 rounded-xl border border-snap-border bg-snap-surface p-8">
-            <h3 className="text-lg font-semibold text-snap-textMain">{t("tasks.editTask")}</h3>
-
-            <div className="space-y-1">
-              <label className="text-xs text-snap-textDim">{t("tasks.description")} *</label>
-              <textarea
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-snap-textDim">{t("tasks.assignTo")} *</label>
-              <select
-                value={form.assignedTo}
-                onChange={(e) => setForm((f) => ({ ...f, assignedTo: e.target.value }))}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
-              >
-                <option value="">{t("tasks.selectAssignee")}</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {[u.firstName, u.lastName].filter(Boolean).join(" ")} ({u.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-snap-textDim">{t("tasks.linkInvoice")}</label>
-              <select
-                value={form.invoiceId}
-                onChange={(e) => setForm((f) => ({ ...f, invoiceId: e.target.value }))}
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
-              >
-                <option value="">{t("tasks.noInvoice")}</option>
-                {invoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-snap-textDim">{t("tasks.status")}</label>
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, status: e.target.value as "open" | "in_progress" | "done" }))
-                }
-                className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textMain focus:outline-none"
-              >
-                <option value="open">{t("tasks.statusOpen")}</option>
-                <option value="in_progress">{t("tasks.statusInProgress")}</option>
-                <option value="done">{t("tasks.statusDone")}</option>
-              </select>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditTask(null)}
-                className="rounded-md border border-snap-border px-4 py-2 text-sm text-snap-textDim hover:bg-snap-bg"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleUpdate()}
-                disabled={saving || !form.description.trim()}
-                className="rounded-md border border-snap-border bg-snap-card px-4 py-2 text-sm text-snap-textMain hover:bg-snap-bg disabled:opacity-50"
-              >
-                {saving ? t("common.loading") : t("common.save")}
-              </button>
-            </div>
-          </div>
-        </div>
+      {editingTaskId ? (
+        <TaskEditModal
+          taskId={editingTaskId}
+          onClose={() => setEditingTaskId(null)}
+          onSaved={handleTaskSaved}
+        />
       ) : null}
 
       {/* Delete Confirm Modal */}

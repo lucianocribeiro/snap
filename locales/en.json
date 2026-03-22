@@ -12,7 +12,8 @@
     "profile": "Profile",
     "language": "Language",
     "logout": "Sign Out",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "inbox": "Inbox"
   },
   "auth": {
     "signIn": "Sign In",
@@ -510,6 +511,20 @@
     "navigation": "Navigation",
     "cannotBeUndone": "This action cannot be undone.",
     "dismiss": "Dismiss"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "empty": "You have no notifications",
+    "markAllRead": "Mark all as read",
+    "unread": "Unread"
+  },
+  "notifications": {
+    "taskAssigned": "Task assigned to me",
+    "taskUpdated": "Task updated",
+    "invoiceOverdue": "Invoice overdue",
+    "invoiceAdded": "Invoice added to my project",
+    "preferencesSaved": "Notification preferences saved",
+    "preferences": "Notification Preferences"
   },
   "tasks": {
     "title": "Tasks",

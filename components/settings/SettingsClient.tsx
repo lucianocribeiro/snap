@@ -40,6 +40,14 @@ export function SettingsClient() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [preferencesSubmitting, setPreferencesSubmitting] = useState(false);
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState({
+    task_assigned: true,
+    task_updated: true,
+    invoice_overdue: true,
+    invoice_added: true,
+  });
+
   const showOrgTab = userRole === "org_admin" || (userRole === "super_admin" && !!organizationId);
   const visibleTabs = showOrgTab
     ? [
@@ -78,6 +86,8 @@ export function SettingsClient() {
         setLoading(false);
         return;
       }
+
+      setUserId(user.id);
 
       const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
@@ -165,6 +175,41 @@ export function SettingsClient() {
     setToast(t("settings.logoUpdated"));
     event.target.value = "";
   };
+
+  useEffect(() => {
+    if (!userId || activeTab !== "preferences") return;
+
+    const loadPrefs = async () => {
+      const { data } = await supabase
+        .from("notification_preferences")
+        .select("task_assigned, task_updated, invoice_overdue, invoice_added")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (data) {
+        setNotifPrefs({
+          task_assigned: data.task_assigned as boolean,
+          task_updated: data.task_updated as boolean,
+          invoice_overdue: data.invoice_overdue as boolean,
+          invoice_added: data.invoice_added as boolean,
+        });
+      }
+    };
+
+    void loadPrefs();
+  }, [userId, activeTab, supabase]);
+
+  async function upsertNotifPref(key: keyof typeof notifPrefs, value: boolean) {
+    if (!userId) return;
+    const updated = { ...notifPrefs, [key]: value };
+    setNotifPrefs(updated);
+
+    await supabase.from("notification_preferences").upsert(
+      { user_id: userId, ...updated, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    setToast(t("notifications.preferencesSaved"));
+  }
 
   const saveOrganization = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -483,6 +528,41 @@ export function SettingsClient() {
               {preferencesSubmitting ? t("settings.saving") : t("settings.savePreferences")}
             </button>
           </form>
+
+          <div className="mt-8 border-t border-snap-border pt-6">
+            <h3 className="text-base font-semibold text-snap-textMain">{t("notifications.preferences")}</h3>
+            <ul className="mt-4 space-y-4">
+              {(
+                [
+                  ["task_assigned", t("notifications.taskAssigned")],
+                  ["task_updated", t("notifications.taskUpdated")],
+                  ["invoice_overdue", t("notifications.invoiceOverdue")],
+                  ["invoice_added", t("notifications.invoiceAdded")],
+                ] as Array<[keyof typeof notifPrefs, string]>
+              ).map(([key, label]) => (
+                <li key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-snap-textMain">{label}</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifPrefs[key]}
+                    onClick={() => void upsertNotifPref(key, !notifPrefs[key])}
+                    className={[
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none",
+                      notifPrefs[key] ? "bg-blue-500" : "bg-snap-border",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform",
+                        notifPrefs[key] ? "translate-x-5" : "translate-x-0",
+                      ].join(" ")}
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
     </div>

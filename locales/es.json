@@ -12,7 +12,8 @@
     "profile": "Perfil",
     "language": "Idioma",
     "logout": "Cerrar sesión",
-    "tasks": "Tareas"
+    "tasks": "Tareas",
+    "inbox": "Bandeja de entrada"
   },
   "auth": {
     "signIn": "Iniciar sesión",
@@ -509,6 +510,20 @@
     "navigation": "Navegación",
     "cannotBeUndone": "Esta acción no se puede deshacer.",
     "dismiss": "Cerrar"
+  },
+  "inbox": {
+    "title": "Bandeja de entrada",
+    "empty": "No tienes notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "unread": "No leído"
+  },
+  "notifications": {
+    "taskAssigned": "Tarea asignada a mí",
+    "taskUpdated": "Tarea actualizada",
+    "invoiceOverdue": "Factura vencida",
+    "invoiceAdded": "Factura agregada a mi proyecto",
+    "preferencesSaved": "Preferencias de notificación guardadas",
+    "preferences": "Preferencias de notificación"
   },
   "tasks": {
     "title": "Tareas",

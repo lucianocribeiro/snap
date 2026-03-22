@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Menu } from "lucide-react";
+import { Bell, ChevronDown, Menu } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -25,6 +25,7 @@ const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
     { href: "/projects", labelKey: "nav.projects" },
     { href: "/invoices", labelKey: "nav.invoices" },
     { href: "/reports", labelKey: "nav.reports" },
+    { href: "/inbox", labelKey: "nav.inbox" },
     { href: "/users", labelKey: "nav.users" },
     { href: "/categories", labelKey: "nav.categories" },
     { href: "/settings", labelKey: "nav.settings" },
@@ -34,6 +35,7 @@ const roleNavItems: Record<"super_admin" | "org_admin" | "user", NavItem[]> = {
     { href: "/projects", labelKey: "nav.projects" },
     { href: "/invoices", labelKey: "nav.invoices" },
     { href: "/reports", labelKey: "nav.reports" },
+    { href: "/inbox", labelKey: "nav.inbox" },
     { href: "/settings", labelKey: "nav.settings" },
   ],
   super_admin: [
@@ -148,6 +150,7 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
   const [orgLogoVisible, setOrgLogoVisible] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const effectiveRole = useMemo(() => {
     if (!userRole) return null;
@@ -169,6 +172,23 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
   useEffect(() => {
     window.localStorage.setItem("snap.sidebarCollapsed", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
+      setUnreadCount(count ?? 0);
+    };
+
+    void fetchUnread();
+    const interval = setInterval(() => void fetchUnread(), 60_000);
+    return () => clearInterval(interval);
+  }, [user?.id, supabase]);
 
   useEffect(() => {
     if (!organizationId || (userRole === "super_admin" && activeContext === "super_admin")) {
@@ -251,6 +271,20 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
               <span className="text-sm text-snap-textDim">
                 {firstName && lastName ? `${firstName} ${lastName}` : (user?.email ?? "")}
               </span>
+              <div className="relative">
+                <Link
+                  href="/inbox"
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-snap-border bg-snap-bg text-snap-textDim hover:bg-snap-bgSecondary hover:text-snap-textMain"
+                  aria-label={t("nav.inbox")}
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </div>
               <div className="inline-flex rounded-md border border-snap-border bg-snap-bg p-1">
                 {(["en", "es"] as const).map((lang) => (
                   <button

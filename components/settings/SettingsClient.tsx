@@ -328,7 +328,7 @@ export function SettingsClient() {
           {userRole === "org_admin" ? (
             <div className="mt-8 border-t border-snap-border pt-6">
               <h3 className="text-base font-semibold text-snap-textMain">{t("settings.logoTitle")}</h3>
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 flex flex-col items-center space-y-3 text-center">
                 <div>
                   {logoUrl ? (
                     <img

@@ -146,12 +146,14 @@ export default function UsersPage() {
     const { data, error } = await supabase
       .from("user_profiles")
       .select("id, first_name, last_name, email, role, is_active, last_login_at, access_level")
+      .neq("role", "super_admin")
       .order("first_name", { ascending: true });
 
     if (error) {
       const fallback = await supabase
         .from("user_profiles")
         .select("id, first_name, last_name, email, role, status, last_login_at, access_level")
+        .neq("role", "super_admin")
         .order("first_name", { ascending: true });
 
       if (fallback.error) {

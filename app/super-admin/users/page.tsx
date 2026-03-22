@@ -1,6 +1,8 @@
 import { UsersAuditClient } from "@/components/super-admin/UsersAuditClient";
 import { getUsersAuditData } from "@/lib/super-admin/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuperAdminUsersPage() {
   const users = await getUsersAuditData();
 

@@ -240,12 +240,9 @@ export function DashboardLayout({ pageTitle, children }: DashboardLayoutProps) {
                   <img
                     src={orgLogoUrl}
                     alt={organizationName ?? ""}
-                    style={{ height: 42, objectFit: "contain" }}
+                    style={{ height: 63, objectFit: "contain" }}
                     onError={() => setOrgLogoVisible(false)}
                   />
-                ) : null}
-                {organizationName ? (
-                  <span className="text-sm text-snap-textDim">{organizationName}</span>
                 ) : null}
               </div>
             ) : null}

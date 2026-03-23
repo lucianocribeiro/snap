@@ -49,7 +49,7 @@ const TASK_TYPES = new Set([
 
 export default function InboxPage() {
   const supabase = useMemo(() => createClient(), []);
-  const { user, userRole, organizationId } = useAuth();
+  const { user, userRole, organizationId, firstName, lastName } = useAuth();
   const { t } = useLanguage();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -220,11 +220,33 @@ export default function InboxPage() {
   }
 
   async function submitForApproval(n: Notification) {
-    if (!n.relatedTaskId) return;
+    if (!n.relatedTaskId || !user?.id) return;
+
     await supabase
       .from("tasks")
       .update({ status: "pending_approval", updated_at: new Date().toISOString() })
       .eq("id", n.relatedTaskId);
+
+    const { data: taskRow } = await supabase
+      .from("tasks")
+      .select("created_by, title")
+      .eq("id", n.relatedTaskId)
+      .single();
+    const createdBy = (taskRow as { created_by: string; title: string } | null)?.created_by ?? null;
+    const taskTitle = (taskRow as { created_by: string; title: string } | null)?.title ?? n.title;
+    const submitterName = [firstName, lastName].filter(Boolean).join(" ") || "Someone";
+
+    if (createdBy && createdBy !== user.id) {
+      await supabase.from("notifications").insert({
+        user_id: createdBy,
+        organization_id: organizationId,
+        type: "task_pending_approval",
+        title: taskTitle,
+        body: `${submitterName} completed a task and is awaiting your approval`,
+        related_task_id: n.relatedTaskId,
+      });
+    }
+
     await supabase.from("notifications").update({ read: true }).eq("id", n.id);
     setNotifications((prev) =>
       prev.map((x) =>

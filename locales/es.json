@@ -559,7 +559,11 @@
     "postComment": "Publicar",
     "noComments": "Sin comentarios aún",
     "statusPendingApproval": "Pendiente de aprobación",
-    "taskTitle": "Título de la tarea"
+    "taskTitle": "Título de la tarea",
+    "approvalComment": "Agrega un comentario para el asignado (requerido)",
+    "denialReason": "Explica por qué se devuelve esta tarea (requerido)",
+    "confirmApproval": "Confirmar aprobación",
+    "confirmDenial": "Confirmar rechazo"
   },
   "confidence": {
     "high": "Alta confianza",

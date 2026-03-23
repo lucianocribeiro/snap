@@ -560,7 +560,11 @@
     "postComment": "Post",
     "noComments": "No comments yet",
     "statusPendingApproval": "Pending Approval",
-    "taskTitle": "Task Title"
+    "taskTitle": "Task Title",
+    "approvalComment": "Add a comment for the assignee (required)",
+    "denialReason": "Explain why this task is being returned (required)",
+    "confirmApproval": "Confirm Approval",
+    "confirmDenial": "Confirm Denial"
   },
   "confidence": {
     "high": "High confidence",

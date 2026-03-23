@@ -166,6 +166,7 @@ export default function InboxPage() {
     if (assigneeId && assigneeId !== user.id) {
       await supabase.from("notifications").insert({
         user_id: assigneeId,
+        organization_id: organizationId,
         type: "task_approved",
         title: n.title,
         body: `Your task was approved: ${commentText}`,
@@ -205,6 +206,7 @@ export default function InboxPage() {
     if (assigneeId && assigneeId !== user.id) {
       await supabase.from("notifications").insert({
         user_id: assigneeId,
+        organization_id: organizationId,
         type: "task_denied",
         title: n.title,
         body: `Your task was returned for revision: ${commentText}`,

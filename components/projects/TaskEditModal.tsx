@@ -192,6 +192,7 @@ export function TaskEditModal({ taskId, isAdmin = false, onClose, onSaved }: Tas
       invoiceId: invoiceId || null,
       invoiceLabel: inv ? inv.label : null,
     });
+    onClose();
   }
 
   return (
@@ -275,7 +276,6 @@ export function TaskEditModal({ taskId, isAdmin = false, onClose, onSaved }: Tas
               >
                 <option value="open">{t("tasks.statusOpen")}</option>
                 <option value="in_progress">{t("tasks.statusInProgress")}</option>
-                <option value="pending_approval">{t("tasks.statusPendingApproval")}</option>
                 {isAdmin ? (
                   <option value="done">{t("tasks.statusDone")}</option>
                 ) : null}

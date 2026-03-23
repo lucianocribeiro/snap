@@ -43,12 +43,18 @@ const TASK_TYPES = new Set([
 
 export default function InboxPage() {
   const supabase = useMemo(() => createClient(), []);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { t } = useLanguage();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
 
   function statusLabel(status: string): string {
     if (status === "open") return t("tasks.statusOpen");
@@ -111,6 +117,28 @@ export default function InboxPage() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
+  async function approveTask(n: Notification) {
+    if (!n.relatedTaskId || !user?.id) return;
+    await supabase
+      .from("tasks")
+      .update({ status: "done", approved_by: user.id, updated_at: new Date().toISOString() })
+      .eq("id", n.relatedTaskId);
+    await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+    setNotifications((prev) => prev.filter((x) => x.id !== n.id));
+    showToast(t("tasks.taskApproved"));
+  }
+
+  async function sendBackTask(n: Notification) {
+    if (!n.relatedTaskId) return;
+    await supabase
+      .from("tasks")
+      .update({ status: "open", updated_at: new Date().toISOString() })
+      .eq("id", n.relatedTaskId);
+    await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+    setNotifications((prev) => prev.filter((x) => x.id !== n.id));
+    showToast(t("tasks.taskDenied"));
+  }
+
   function openEditTask(n: Notification) {
     if (!n.read) void markRead(n.id);
     setEditingTaskId(n.relatedTaskId);
@@ -119,6 +147,12 @@ export default function InboxPage() {
   return (
     <DashboardLayout pageTitle={t("inbox.title")}>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {toast ? (
+          <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
+            {toast}
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-snap-textMain">{t("inbox.title")}</h2>
           {notifications.some((n) => !n.read) ? (
@@ -199,6 +233,24 @@ export default function InboxPage() {
                           >
                             {t("tasks.editTask")}
                           </button>
+                        ) : null}
+                        {n.type === "task_pending_approval" && userRole === "org_admin" ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); void approveTask(n); }}
+                              className="rounded-md border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400 hover:bg-emerald-500/10"
+                            >
+                              {t("tasks.approve")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); void sendBackTask(n); }}
+                              className="rounded-md border border-snap-border px-2 py-0.5 text-xs text-snap-textDim hover:bg-snap-bg"
+                            >
+                              {t("tasks.sendBack")}
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </div>

@@ -364,7 +364,7 @@ export default function InboxPage() {
                       ) : null}
                       <div className="flex items-center gap-3 pt-0.5">
                         <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
-                        {isTaskNotif && n.taskStatus !== "pending_approval" ? (
+                        {isTaskNotif && n.taskStatus !== "pending_approval" && n.taskStatus !== "done" ? (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); openEditTask(n); }}

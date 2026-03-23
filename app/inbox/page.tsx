@@ -144,6 +144,21 @@ export default function InboxPage() {
     showToast(t("tasks.taskApproved"));
   }
 
+  async function submitForApproval(n: Notification) {
+    if (!n.relatedTaskId) return;
+    await supabase
+      .from("tasks")
+      .update({ status: "pending_approval", updated_at: new Date().toISOString() })
+      .eq("id", n.relatedTaskId);
+    await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+    setNotifications((prev) =>
+      prev.map((x) =>
+        x.id === n.id ? { ...x, read: true, taskStatus: "pending_approval" } : x,
+      ),
+    );
+    showToast(t("tasks.submittedForApproval"));
+  }
+
   async function sendBackTask(n: Notification) {
     if (!n.relatedTaskId) return;
     await supabase
@@ -239,6 +254,19 @@ export default function InboxPage() {
                       ) : null}
 
                       <p className="text-sm text-snap-textDim">{n.body}</p>
+                      {(n.type === "task_assigned" || n.type === "task_updated") &&
+                      (n.taskStatus === "open" || n.taskStatus === "in_progress") &&
+                      userRole !== "org_admin" ? (
+                        <div className="pt-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); void submitForApproval(n); }}
+                            className="rounded-md border border-amber-500/30 px-3 py-1 text-xs text-amber-400 hover:bg-amber-500/10"
+                          >
+                            {t("tasks.submitForApproval")}
+                          </button>
+                        </div>
+                      ) : null}
                       <div className="flex items-center gap-3 pt-0.5">
                         <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
                         {isTaskNotif ? (

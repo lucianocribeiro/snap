@@ -98,6 +98,22 @@ export default function InboxPage() {
     };
 
     void load();
+
+    const subscription = supabase
+      .channel(`inbox-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const deletedId = (payload.old as { id: string }).id;
+          setNotifications((prev) => prev.filter((n) => n.id !== deletedId));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void subscription.unsubscribe();
+    };
   }, [user?.id, supabase]);
 
   async function markRead(id: string) {

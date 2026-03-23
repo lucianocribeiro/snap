@@ -405,7 +405,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
         </div>
       ) : null}
 
-      {!loading && tasks.length > 0 ? (
+      {!loading && tasks.length > 0 && user ? (
         <ul className="space-y-3">
           {tasks.map((task) => {
             const isParticipant =

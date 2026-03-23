@@ -234,10 +234,15 @@ export default function InboxPage() {
       .single();
     const createdBy = (taskRow as { created_by: string; title: string } | null)?.created_by ?? null;
     const taskTitle = (taskRow as { created_by: string; title: string } | null)?.title ?? n.title;
+
+    if (!taskRow || !createdBy) {
+      console.error("submitForApproval: failed to fetch task row or createdBy is null", { taskRow, relatedTaskId: n.relatedTaskId });
+    }
+
     const submitterName = [firstName, lastName].filter(Boolean).join(" ") || "Someone";
 
     if (createdBy && createdBy !== user.id) {
-      await supabase.from("notifications").insert({
+      const { error: notifError } = await supabase.from("notifications").insert({
         user_id: createdBy,
         organization_id: organizationId,
         type: "task_pending_approval",
@@ -245,6 +250,7 @@ export default function InboxPage() {
         body: `${submitterName} completed a task and is awaiting your approval`,
         related_task_id: n.relatedTaskId,
       });
+      if (notifError) console.error("submitForApproval: notification insert error:", notifError);
     }
 
     await supabase.from("notifications").update({ read: true }).eq("id", n.id);
@@ -356,7 +362,7 @@ export default function InboxPage() {
                       ) : null}
                       <div className="flex items-center gap-3 pt-0.5">
                         <p className="text-xs text-snap-textDim">{timeAgo(n.createdAt)}</p>
-                        {isTaskNotif ? (
+                        {isTaskNotif && n.taskStatus !== "pending_approval" ? (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); openEditTask(n); }}

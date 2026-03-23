@@ -431,7 +431,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
                     <p className="text-sm text-snap-textMain">{task.description}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {isAdmin ? (
+                    {isAdmin && task.status !== "pending_approval" ? (
                       <button
                         type="button"
                         onClick={() => setEditingTaskId(task.id)}

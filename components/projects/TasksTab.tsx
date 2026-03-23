@@ -39,7 +39,7 @@ type TaskComment = {
   id: string;
   userId: string;
   userName: string;
-  comment: string;
+  content: string;
   createdAt: string;
 };
 
@@ -306,7 +306,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
     const { data } = await supabase
       .from("task_comments")
       .select(
-        `id, user_id, comment, created_at,
+        `id, user_id, content, created_at,
          commenter:user_profiles!task_comments_user_id_fkey(first_name, last_name)`,
       )
       .eq("task_id", taskId)
@@ -320,7 +320,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
         userName: commenter
           ? [commenter.first_name, commenter.last_name].filter(Boolean).join(" ")
           : "",
-        comment: row["comment"] as string,
+        content: row["content"] as string,
         createdAt: row["created_at"] as string,
       };
     });
@@ -340,9 +340,9 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
         task_id: task.id,
         user_id: user.id,
         organization_id: organizationId,
-        comment: content,
+        content: content,
       })
-      .select("id, user_id, comment, created_at")
+      .select("id, user_id, content, created_at")
       .single();
 
     setPostingComment((prev) => ({ ...prev, [task.id]: false }));
@@ -356,7 +356,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
       userName: currentUser
         ? [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ")
         : "",
-      comment: row["comment"] as string,
+      content: row["content"] as string,
       createdAt: row["created_at"] as string,
     };
 
@@ -533,7 +533,7 @@ export function TasksTab({ projectId, organizationId }: TasksTabProps) {
                             </span>
                             <div className="space-y-0.5">
                               <p className="text-xs font-medium text-snap-textMain">{c.userName}</p>
-                              <p className="text-xs text-snap-textDim">{c.comment}</p>
+                              <p className="text-xs text-snap-textDim">{c.content}</p>
                               <p className="text-[10px] text-snap-textDim">{timeAgo(c.createdAt)}</p>
                             </div>
                           </div>

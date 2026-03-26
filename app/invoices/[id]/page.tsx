@@ -72,6 +72,7 @@ export default function InvoiceDetailPage() {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [invoice, setInvoice] = useState<EditableInvoice | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
@@ -84,8 +85,15 @@ export default function InvoiceDetailPage() {
   const canDelete = userRole === "org_admin";
 
   useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     if (search.get("created") === "1") {
+      setToastType("success");
       setToast(t("invoices.savedSuccess"));
     }
   }, [t]);
@@ -210,10 +218,12 @@ export default function InvoiceDetailPage() {
       .eq("id", invoice.id);
 
     if (error) {
+      setToastType("error");
       setToast(t("invoices.failedUpdateInvoice"));
       return;
     }
 
+    setToastType("success");
     setToast(t("invoices.updatedSuccess"));
   };
 
@@ -363,7 +373,13 @@ export default function InvoiceDetailPage() {
         <PageHeader title={t("invoices.invoiceDetail")} description={t("invoices.reviewUpdate")} />
 
         {toast ? (
-          <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
+          <div
+            className={`rounded-md border px-4 py-3 text-sm ${
+              toastType === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                : "border-red-500/30 bg-red-500/10 text-red-300"
+            }`}
+          >
             {toast}
           </div>
         ) : null}

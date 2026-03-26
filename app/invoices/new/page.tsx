@@ -136,6 +136,7 @@ export default function NewInvoicePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReadingInvoice, setIsReadingInvoice] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [invoiceValidationError, setInvoiceValidationError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -181,6 +182,12 @@ export default function NewInvoicePage() {
   }, [supabase]);
 
   useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
     if (!selectedProjectId) return;
     const loadProjectConfig = async () => {
       const [{ data: projectRow }, { data: categoryRows }] = await Promise.all([
@@ -207,6 +214,11 @@ export default function NewInvoicePage() {
   const activeProjects = projects.filter((project) => project.status?.toLowerCase() !== "archived");
   const canContinueStep1 = Boolean(selectedProjectId);
   const canSave = Boolean(formState.categoryId && formState.status);
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToastType(type);
+    setToast(message);
+  };
 
   const goToStep = (nextStep: number) => {
     const boundedStep = Math.min(Math.max(nextStep, 1), steps.length);
@@ -288,7 +300,7 @@ export default function NewInvoicePage() {
 
     const alreadyExists = categories.some((category) => normalizeCategory(category.name) === normalizedName);
     if (alreadyExists) {
-      setToast(t("invoices.categoryAlreadyExists"));
+      showToast(t("invoices.categoryAlreadyExists"), "error");
       return;
     }
 
@@ -302,7 +314,7 @@ export default function NewInvoicePage() {
     } = await supabase.auth.getUser();
 
     if (!authUser) {
-      setToast(t("settings.sessionExpired"));
+      showToast(t("settings.sessionExpired"), "error");
       return;
     }
 
@@ -321,7 +333,7 @@ export default function NewInvoicePage() {
       .single();
 
     if (error || !data) {
-      setToast(t("invoices.failedAddCategory"));
+      showToast(t("invoices.failedAddCategory"), "error");
       setIsAddingCategory(false);
       return;
     }
@@ -368,18 +380,18 @@ export default function NewInvoicePage() {
 
     setRequestModalOpen(false);
     setCategoryInput("");
-    setToast(t("projects.form.categoryRequestSent"));
+    showToast(t("projects.form.categoryRequestSent"), "success");
   };
 
   const runOCRForFile = async (nextFile: File) => {
     if (!selectedProjectId) {
-      setToast(t("invoices.selectProjectBeforeUpload"));
+      showToast(t("invoices.selectProjectBeforeUpload"), "error");
       return;
     }
 
     const resolvedOrganizationId = await resolveOrganizationId();
     if (!resolvedOrganizationId) {
-      setToast(t("invoices.resolveOrganizationTryAgain"));
+      showToast(t("invoices.resolveOrganizationTryAgain"), "error");
       return;
     }
 
@@ -403,7 +415,7 @@ export default function NewInvoicePage() {
 
     if (uploadError) {
       setIsReadingInvoice(false);
-      setToast(t("invoices.ocrReadFailedManual"));
+      showToast(t("invoices.ocrReadFailedManual"), "error");
       goToStep(5);
       return;
     }
@@ -427,7 +439,7 @@ export default function NewInvoicePage() {
 
     if (error || !data) {
       setIsReadingInvoice(false);
-      setToast(t("invoices.ocrReadFailedManual"));
+      showToast(t("invoices.ocrReadFailedManual"), "error");
       goToStep(5);
       return;
     }
@@ -469,7 +481,7 @@ export default function NewInvoicePage() {
   const handleFileSelect = (nextFile: File | null) => {
     if (!nextFile) return;
     if (nextFile.size > 10 * 1024 * 1024) {
-      setToast(t("invoices.maxFileSize"));
+      showToast(t("invoices.maxFileSize"), "error");
       return;
     }
     void runOCRForFile(nextFile);
@@ -539,7 +551,7 @@ export default function NewInvoicePage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setToast(t("settings.sessionExpired"));
+      showToast(t("settings.sessionExpired"), "error");
       setIsSaving(false);
       return;
     }
@@ -584,7 +596,7 @@ export default function NewInvoicePage() {
     const { data, error } = await supabase.from("invoices").insert(payload).select("id").single();
 
     if (error || !data) {
-      setToast(t("invoices.failedSaveInvoice"));
+      showToast(t("invoices.failedSaveInvoice"), "error");
       setIsSaving(false);
       return;
     }
@@ -733,7 +745,13 @@ export default function NewInvoicePage() {
         <PageHeader title={t("invoices.addInvoice")} description={t("invoices.manualEntryDescription")} />
 
         {toast ? (
-          <div className="rounded-md border border-snap-border bg-snap-surface px-4 py-3 text-sm text-snap-textMain">
+          <div
+            className={`rounded-md border px-4 py-3 text-sm ${
+              toastType === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                : "border-red-500/30 bg-red-500/10 text-red-300"
+            }`}
+          >
             {toast}
           </div>
         ) : null}

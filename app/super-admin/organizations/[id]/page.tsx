@@ -5,6 +5,8 @@ import { OrganizationDetailClient } from "@/components/super-admin/OrganizationD
 import { I18nText } from "@/components/shared/I18nText";
 import { getOrganizationById } from "@/lib/super-admin/data";
 
+export const dynamic = "force-dynamic";
+
 type OrganizationDetailPageProps = {
   params: Promise<{ id: string }>;
 };

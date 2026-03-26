@@ -243,7 +243,16 @@ export default function InboxPage() {
 
     const submitterName = [firstName, lastName].filter(Boolean).join(" ") || "Someone";
 
-    if (createdBy && createdBy !== user.id) {
+    const { data: existingNotif } = await supabase
+      .from("notifications")
+      .select("id")
+      .eq("user_id", createdBy)
+      .eq("related_task_id", n.relatedTaskId)
+      .eq("type", "task_pending_approval")
+      .eq("read", false)
+      .maybeSingle();
+
+    if (!existingNotif && createdBy && createdBy !== user.id) {
       const { error: notifError } = await supabase.from("notifications").insert({
         user_id: createdBy,
         organization_id: organizationId,
@@ -373,7 +382,7 @@ export default function InboxPage() {
                             {t("tasks.editTask")}
                           </button>
                         ) : null}
-                        {n.type === "task_pending_approval" && userRole === "org_admin" ? (
+                        {n.type === "task_pending_approval" && userRole === "org_admin" && n.taskStatus === "pending_approval" ? (
                           <>
                             <button
                               type="button"

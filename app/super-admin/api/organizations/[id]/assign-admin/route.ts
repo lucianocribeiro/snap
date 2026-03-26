@@ -41,6 +41,7 @@ async function promoteUser(
         ...(firstName ? { first_name: firstName } : {}),
         ...(lastName ? { last_name: lastName } : {}),
       },
+      redirectTo: "https://snap-sand-xi.vercel.app/reset-password",
     },
   );
 

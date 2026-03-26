@@ -5,6 +5,8 @@ import { EditOrganizationForm } from "@/components/super-admin/EditOrganizationF
 import { I18nText } from "@/components/shared/I18nText";
 import { getOrganizationById } from "@/lib/super-admin/data";
 
+export const dynamic = "force-dynamic";
+
 type EditOrganizationPageProps = {
   params: Promise<{ id: string }>;
 };

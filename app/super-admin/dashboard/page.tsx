@@ -4,6 +4,8 @@ import { RecentOrganizationsTable } from "@/components/super-admin/RecentOrganiz
 import { I18nText } from "@/components/shared/I18nText";
 import { getPlatformSummary, getRecentOrganizations } from "@/lib/super-admin/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuperAdminDashboardPage() {
   const [summary, recentOrganizations] = await Promise.all([
     getPlatformSummary(),

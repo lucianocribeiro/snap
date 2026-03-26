@@ -218,7 +218,7 @@ export function SuperAdminSettingsClient() {
               className="w-full rounded-md border border-snap-border bg-snap-bg px-3 py-2 text-sm text-snap-textDim outline-none"
             />
             <p className="text-xs text-snap-textDim">
-              Email changes require the Supabase authentication flow.
+              {t("settings.emailChangeRequiresAuthFlow")}
             </p>
           </div>
 

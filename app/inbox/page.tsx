@@ -241,7 +241,7 @@ export default function InboxPage() {
       console.error("submitForApproval: failed to fetch task row or createdBy is null", { taskRow, relatedTaskId: n.relatedTaskId });
     }
 
-    const submitterName = [firstName, lastName].filter(Boolean).join(" ") || "Someone";
+    const submitterName = [firstName, lastName].filter(Boolean).join(" ") || t("common.someone");
 
     const { data: existingNotif } = await supabase
       .from("notifications")

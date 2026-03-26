@@ -113,7 +113,7 @@ export function NewOrganizationForm() {
           onChange={(event) => handleSelfAdminToggle(event.target.checked)}
           className="h-4 w-4 rounded border border-snap-border accent-snap-accent"
         />
-        I am the admin of this organization
+        {t("superAdmin.iAmAdmin")}
       </label>
 
       <div className="grid gap-4 md:grid-cols-2">

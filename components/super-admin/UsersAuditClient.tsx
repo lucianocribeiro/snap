@@ -11,16 +11,12 @@ type UsersAuditClientProps = {
   users: UsersAuditItem[];
 };
 
-function formatRole(role: string) {
-  return role === "org_admin" ? "Admin" : "User";
-}
-
 function formatLastLogin(value: string | null) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -120,7 +116,7 @@ export function UsersAuditClient({ users }: UsersAuditClientProps) {
                   <td className="px-3 py-3 text-snap-textMain">{user.name}</td>
                   <td className="px-3 py-3 text-snap-textDim">{user.email}</td>
                   <td className="px-3 py-3 text-snap-textDim">{user.organizationName}</td>
-                  <td className="px-3 py-3 text-snap-textDim">{formatRole(user.role) === "Admin" ? t("common.admin") : t("users.user")}</td>
+                  <td className="px-3 py-3 text-snap-textDim">{user.role === "org_admin" ? t("common.admin") : t("users.user")}</td>
                   <td className="px-3 py-3">
                     <StatusBadge
                       variant="user"

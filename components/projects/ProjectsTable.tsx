@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import type { PeriodType, ProjectStatus } from "@/components/dashboard/types";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export type ProjectTableRow = {
   id: string;
@@ -34,20 +35,31 @@ function periodBadgeClass(periodType: PeriodType) {
 }
 
 export function ProjectsTable({ projects, canManage, onArchive }: ProjectsTableProps) {
+  const { t } = useLanguage();
+
+  const resolvePeriodTypeLabel = (periodType: PeriodType) => {
+    if (periodType === "Weekly") return t("dashboard.charts.weekly");
+    if (periodType === "Monthly") return t("dashboard.charts.monthly");
+    return t("dashboard.charts.custom");
+  };
+
+  const resolveStatusLabel = (status: ProjectStatus) =>
+    status === "Active" ? t("status.active") : t("status.archived");
+
   return (
     <div className="overflow-x-auto rounded-lg border border-snap-border bg-snap-surface">
       <table className="min-w-full divide-y divide-snap-border">
         <thead className="bg-snap-bg/80">
           <tr>
             {[
-              "Project",
-              "Period Type",
-              "Columns",
-              "Categories",
-              "Invoices",
-              "Created",
-              "Status",
-              "Actions",
+              t("common.project"),
+              t("projects.periodType"),
+              t("projects.columns"),
+              t("categories.title"),
+              t("projects.invoices"),
+              t("superAdmin.dateCreated"),
+              t("common.status"),
+              t("common.actions"),
             ].map((column) => (
               <th
                 key={column}
@@ -73,32 +85,32 @@ export function ProjectsTable({ projects, canManage, onArchive }: ProjectsTableP
                     periodBadgeClass(project.periodType),
                   ].join(" ")}
                 >
-                  {project.periodType}
+                  {resolvePeriodTypeLabel(project.periodType)}
                 </span>
               </td>
-              <td className="px-4 py-4 text-sm text-snap-textDim">{project.columnsCount} columns</td>
+              <td className="px-4 py-4 text-sm text-snap-textDim">{`${project.columnsCount} ${t("projects.columnsCountSuffix")}`}</td>
               <td className="px-4 py-4 text-sm text-snap-textDim">{project.categoriesCount}</td>
               <td className="px-4 py-4 text-sm text-snap-textDim">{project.invoicesCount}</td>
               <td className="px-4 py-4 text-sm text-snap-textDim">{formatDate(project.createdAt)}</td>
               <td className="px-4 py-4 text-sm">
-                <StatusBadge status={project.status} variant="project" />
+                <StatusBadge status={resolveStatusLabel(project.status)} variant="project" />
               </td>
               <td className="px-4 py-4 text-sm text-snap-textDim">
                 <div className="flex items-center gap-3">
                   <Link href={`/projects/${project.id}`} className="hover:text-snap-textMain">
-                    View
+                    {t("common.view")}
                   </Link>
                   {canManage ? (
                     <>
                       <Link href={`/projects/${project.id}/edit`} className="hover:text-snap-textMain">
-                        Edit
+                        {t("common.edit")}
                       </Link>
                       <button
                         type="button"
                         onClick={() => onArchive(project)}
                         className="text-amber-300 hover:text-amber-200"
                       >
-                        Archive
+                        {t("projects.archive")}
                       </button>
                     </>
                   ) : null}

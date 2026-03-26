@@ -112,7 +112,10 @@ export function RecentInvoicesTable({ invoices, loading = false }: RecentInvoice
                     {invoice.date}
                   </td>
                   <td className="whitespace-nowrap px-6 py-5 text-sm">
-                    <StatusBadge status={invoice.status} variant="invoice" />
+                    <StatusBadge
+                      status={invoice.status === "Paid" ? t("status.paid") : t("status.unpaid")}
+                      variant="invoice"
+                    />
                   </td>
                 </tr>
               ))}

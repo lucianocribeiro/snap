@@ -142,9 +142,9 @@ export default function NewInvoicePage() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
   const [customColumnLabels, setCustomColumnLabels] = useState({
-    custom1: "Custom 1",
-    custom2: "Custom 2",
-    custom3: "Custom 3",
+    custom1: t("common.custom1"),
+    custom2: t("common.custom2"),
+    custom3: t("common.custom3"),
   });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [categoryInput, setCategoryInput] = useState("");
@@ -201,15 +201,15 @@ export default function NewInvoicePage() {
 
       setSelectedColumns((projectRow?.selected_columns as ProjectColumn[]) ?? []);
       setCustomColumnLabels({
-        custom1: projectRow?.custom_column_labels?.custom1 ?? "Custom 1",
-        custom2: projectRow?.custom_column_labels?.custom2 ?? "Custom 2",
-        custom3: projectRow?.custom_column_labels?.custom3 ?? "Custom 3",
+        custom1: projectRow?.custom_column_labels?.custom1 ?? t("common.custom1"),
+        custom2: projectRow?.custom_column_labels?.custom2 ?? t("common.custom2"),
+        custom3: projectRow?.custom_column_labels?.custom3 ?? t("common.custom3"),
       });
       setCategories((categoryRows as CategoryOption[] | null) ?? []);
     };
 
     void loadProjectConfig();
-  }, [selectedProjectId, supabase]);
+  }, [selectedProjectId, supabase, t]);
 
   const activeProjects = projects.filter((project) => project.status?.toLowerCase() !== "archived");
   const canContinueStep1 = Boolean(selectedProjectId);

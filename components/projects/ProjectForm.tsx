@@ -30,19 +30,21 @@ type PendingCategoryRequest = {
   note: string;
 };
 
-const EMPTY_STATE: ProjectFormState = {
-  name: "",
-  description: "",
-  periodType: "Monthly",
-  customPeriods: [],
-  selectedColumns: DEFAULT_SELECTED_COLUMNS,
-  customColumnLabels: {
-    custom1: "Custom 1",
-    custom2: "Custom 2",
-    custom3: "Custom 3",
-  },
-  categories: [],
-};
+function createEmptyState(t: (key: string, vars?: Record<string, string | number>) => string): ProjectFormState {
+  return {
+    name: "",
+    description: "",
+    periodType: "Monthly",
+    customPeriods: [],
+    selectedColumns: DEFAULT_SELECTED_COLUMNS,
+    customColumnLabels: {
+      custom1: t("common.custom1"),
+      custom2: t("common.custom2"),
+      custom3: t("common.custom3"),
+    },
+    categories: [],
+  };
+}
 
 function normalizeCategory(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -71,7 +73,7 @@ export function ProjectForm({
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestCategoryName, setRequestCategoryName] = useState("");
   const [pendingCategoryRequests, setPendingCategoryRequests] = useState<PendingCategoryRequest[]>([]);
-  const [formState, setFormState] = useState<ProjectFormState>(initialState ?? EMPTY_STATE);
+  const [formState, setFormState] = useState<ProjectFormState>(initialState ?? createEmptyState(t));
 
   const steps = [
     t("projects.form.steps.basicInfo"),

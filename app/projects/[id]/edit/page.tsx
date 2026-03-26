@@ -9,14 +9,18 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-function defaultState(): ProjectFormState {
+function defaultState(t: (key: string, vars?: Record<string, string | number>) => string): ProjectFormState {
   return {
     name: "",
     description: "",
     periodType: "Monthly",
     customPeriods: [],
     selectedColumns: [],
-    customColumnLabels: { custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3" },
+    customColumnLabels: {
+      custom1: t("common.custom1"),
+      custom2: t("common.custom2"),
+      custom3: t("common.custom3"),
+    },
     categories: [],
   };
 }
@@ -26,7 +30,7 @@ export default function EditProjectPage() {
   const supabase = useMemo(() => createClient(), []);
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
-  const [formState, setFormState] = useState<ProjectFormState>(defaultState());
+  const [formState, setFormState] = useState<ProjectFormState>(defaultState(t));
   const [invoicesCount, setInvoicesCount] = useState(0);
   const [loadedPeriodType, setLoadedPeriodType] = useState<ProjectFormState["periodType"]>("Monthly");
 
@@ -66,9 +70,9 @@ export default function EditProjectPage() {
           })),
           selectedColumns: (projectRow.selected_columns as ProjectColumn[]) ?? [],
           customColumnLabels: {
-            custom1: projectRow.custom_column_labels?.custom1 ?? "Custom 1",
-            custom2: projectRow.custom_column_labels?.custom2 ?? "Custom 2",
-            custom3: projectRow.custom_column_labels?.custom3 ?? "Custom 3",
+            custom1: projectRow.custom_column_labels?.custom1 ?? t("common.custom1"),
+            custom2: projectRow.custom_column_labels?.custom2 ?? t("common.custom2"),
+            custom3: projectRow.custom_column_labels?.custom3 ?? t("common.custom3"),
           },
           categories: (categoryRows ?? []).map((category) => category.name),
         };
@@ -82,7 +86,7 @@ export default function EditProjectPage() {
     };
 
     void loadProject();
-  }, [params.id, supabase]);
+  }, [params.id, supabase, t]);
 
   return (
     <DashboardLayout pageTitle={t("projects.editProject")}>

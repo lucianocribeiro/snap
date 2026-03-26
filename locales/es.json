@@ -8,7 +8,7 @@
     "categories": "Categorías",
     "settings": "Configuración",
     "organizations": "Organizaciones",
-    "superAdmin": "Super Admin",
+    "superAdmin": "Superadministrador",
     "profile": "Perfil",
     "language": "Idioma",
     "logout": "Cerrar sesión",
@@ -124,6 +124,7 @@
     "selectedColumns": "Columnas seleccionadas",
     "invoices": "Facturas",
     "columns": "Columnas",
+    "columnsCountSuffix": "columnas",
     "totalProjectInvoices": "Total de facturas del proyecto",
     "currentImportedTotal": "Total importado actual",
     "activeCategories": "Categorías activas",
@@ -266,7 +267,8 @@
     "selectProjectPreviewDescription": "Elige un proyecto y filtros arriba para cargar datos de facturas.",
     "loadingPreview": "Cargando vista previa del reporte...",
     "noInvoicesFound": "No se encontraron facturas",
-    "noInvoicesForFilters": "No hay facturas que coincidan con los filtros seleccionados para este proyecto."
+    "noInvoicesForFilters": "No hay facturas que coincidan con los filtros seleccionados para este proyecto.",
+    "weekOf": "Semana del {date}"
   },
   "users": {
     "title": "Usuarios",
@@ -392,7 +394,7 @@
     "logoUpdated": "Logo actualizado correctamente."
   },
   "superAdmin": {
-    "title": "Super Admin",
+    "title": "Superadministrador",
     "dashboard": "Panel",
     "dashboardDescription": "Resumen general de la plataforma y actividad reciente",
     "totalOrganizations": "Total de organizaciones",
@@ -443,6 +445,7 @@
     "creating": "Creando...",
     "createOrganization": "Crear organización",
     "organizationNameRequired": "El nombre de la organización es obligatorio.",
+    "iAmAdmin": "Soy el administrador de esta organización",
     "usersAuditDescription": "Vista de auditoría de todos los usuarios de todas las organizaciones.",
     "allOrganizations": "Todas las organizaciones",
     "allRoles": "Todos los roles",
@@ -498,9 +501,13 @@
     "vendor": "Proveedor",
     "invoiceNumber": "Factura #",
     "notes": "Notas",
+    "custom1": "Personalizado 1",
+    "custom2": "Personalizado 2",
+    "custom3": "Personalizado 3",
     "unknown": "desconocido",
+    "someone": "Alguien",
     "organization": "Organización",
-    "admin": "Admin",
+    "admin": "Administrador",
     "switchTo": "Cambiar a:",
     "openMenu": "Abrir menú",
     "expandSidebar": "Expandir barra lateral",

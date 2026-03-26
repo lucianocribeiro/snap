@@ -127,7 +127,7 @@ function generateMonthlyPeriods(createdAt: string): ProjectPeriod[] {
   return periods;
 }
 
-function generateWeeklyPeriods(createdAt: string): ProjectPeriod[] {
+function generateWeeklyPeriods(createdAt: string, getWeekLabel: (date: Date) => string): ProjectPeriod[] {
   const periods: ProjectPeriod[] = [];
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) return periods;
@@ -140,7 +140,7 @@ function generateWeeklyPeriods(createdAt: string): ProjectPeriod[] {
     const weekEnd = addDays(weekStart, 6);
     periods.push({
       id: toIsoDate(weekStart),
-      name: `Week of ${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`,
+      name: getWeekLabel(weekStart),
       startDate: toIsoDate(weekStart),
       endDate: toIsoDate(weekEnd),
     });
@@ -167,9 +167,9 @@ export default function ReportsPage() {
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>("all");
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
   const [customLabels, setCustomLabels] = useState<{ custom1: string; custom2: string; custom3: string }>({
-    custom1: "Custom 1",
-    custom2: "Custom 2",
-    custom3: "Custom 3",
+    custom1: t("common.custom1"),
+    custom2: t("common.custom2"),
+    custom3: t("common.custom3"),
   });
 
   const selectedProject = useMemo(
@@ -210,9 +210,9 @@ export default function ReportsPage() {
 
       setSelectedColumns(configuredColumns);
       setCustomLabels({
-        custom1: selectedProject?.custom_column_labels?.custom1 ?? "Custom 1",
-        custom2: selectedProject?.custom_column_labels?.custom2 ?? "Custom 2",
-        custom3: selectedProject?.custom_column_labels?.custom3 ?? "Custom 3",
+        custom1: selectedProject?.custom_column_labels?.custom1 ?? t("common.custom1"),
+        custom2: selectedProject?.custom_column_labels?.custom2 ?? t("common.custom2"),
+        custom3: selectedProject?.custom_column_labels?.custom3 ?? t("common.custom3"),
       });
       setSelectedPeriodIds([]);
       setSelectedCategoryIds([]);
@@ -284,7 +284,19 @@ export default function ReportsPage() {
           startDateValue = earliestInvoiceDate;
         }
 
-        setPeriods(startDateValue ? generateWeeklyPeriods(startDateValue) : []);
+        setPeriods(
+          startDateValue
+            ? generateWeeklyPeriods(startDateValue, (weekStart) =>
+                t("reports.weekOf", {
+                  date: weekStart.toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+                }),
+              )
+            : [],
+        );
       } else {
         setPeriods([]);
       }
@@ -293,7 +305,7 @@ export default function ReportsPage() {
     };
 
     void loadProjectFilters();
-  }, [selectedProject, selectedProjectId, supabase]);
+  }, [selectedProject, selectedProjectId, supabase, t]);
 
   useEffect(() => {
     const loadInvoices = async () => {

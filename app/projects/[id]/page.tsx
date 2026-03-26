@@ -234,9 +234,20 @@ export default function ProjectDetailPage() {
             <article className="rounded-lg border border-snap-border bg-snap-surface p-5">
               <p className="text-xs uppercase tracking-wide text-snap-textDim">{t("common.status")}</p>
               <div className="mt-2">
-                <StatusBadge status={project.status} variant="project" />
+                <StatusBadge
+                  status={project.status === "Active" ? t("status.active") : t("status.archived")}
+                  variant="project"
+                />
               </div>
-              <p className="mt-4 text-sm text-snap-textDim">{t("projects.periodType")}: {project.periodType}</p>
+              <p className="mt-4 text-sm text-snap-textDim">
+                {t("projects.periodType")}: {
+                  project.periodType === "Weekly"
+                    ? t("dashboard.charts.weekly")
+                    : project.periodType === "Monthly"
+                      ? t("dashboard.charts.monthly")
+                      : t("dashboard.charts.custom")
+                }
+              </p>
               {project.periodType === "Custom" && project.customPeriods.length > 0 ? (
                 <ul className="mt-3 space-y-2 text-sm text-snap-textDim">
                   {project.customPeriods.map((period) => (

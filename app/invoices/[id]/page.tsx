@@ -76,7 +76,11 @@ export default function InvoiceDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [invoice, setInvoice] = useState<EditableInvoice | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<ProjectColumn[]>([]);
-  const [customLabels, setCustomLabels] = useState({ custom1: "Custom 1", custom2: "Custom 2", custom3: "Custom 3" });
+  const [customLabels, setCustomLabels] = useState({
+    custom1: t("common.custom1"),
+    custom2: t("common.custom2"),
+    custom3: t("common.custom3"),
+  });
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [uploaderName, setUploaderName] = useState<string>("-");
   const [signedFileUrl, setSignedFileUrl] = useState<string | null>(null);
@@ -151,9 +155,9 @@ export default function InvoiceDetailPage() {
 
       setSelectedColumns((projectRow?.selected_columns as ProjectColumn[]) ?? []);
       setCustomLabels({
-        custom1: projectRow?.custom_column_labels?.custom1 ?? "Custom 1",
-        custom2: projectRow?.custom_column_labels?.custom2 ?? "Custom 2",
-        custom3: projectRow?.custom_column_labels?.custom3 ?? "Custom 3",
+        custom1: projectRow?.custom_column_labels?.custom1 ?? t("common.custom1"),
+        custom2: projectRow?.custom_column_labels?.custom2 ?? t("common.custom2"),
+        custom3: projectRow?.custom_column_labels?.custom3 ?? t("common.custom3"),
       });
       setCategories((categoryRows as CategoryOption[] | null) ?? []);
 
@@ -184,7 +188,7 @@ export default function InvoiceDetailPage() {
     };
 
     void load();
-  }, [params.id, supabase]);
+  }, [params.id, supabase, t]);
 
   const updateField = (key: keyof EditableInvoice, value: string) => {
     setInvoice((prev) => (prev ? { ...prev, [key]: value } : prev));

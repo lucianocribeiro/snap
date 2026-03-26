@@ -124,6 +124,7 @@
     "selectedColumns": "Selected columns",
     "invoices": "Invoices",
     "columns": "Columns",
+    "columnsCountSuffix": "columns",
     "totalProjectInvoices": "Total project invoices",
     "currentImportedTotal": "Current imported total",
     "activeCategories": "Active categories",
@@ -266,7 +267,8 @@
     "selectProjectPreviewDescription": "Choose a project and filters above to load invoice data.",
     "loadingPreview": "Loading report preview...",
     "noInvoicesFound": "No invoices found",
-    "noInvoicesForFilters": "No invoices match the selected filters for this project."
+    "noInvoicesForFilters": "No invoices match the selected filters for this project.",
+    "weekOf": "Week of {date}"
   },
   "users": {
     "title": "Users",
@@ -444,6 +446,7 @@
     "creating": "Creating...",
     "createOrganization": "Create organization",
     "organizationNameRequired": "Organization name is required.",
+    "iAmAdmin": "I am the admin of this organization",
     "usersAuditDescription": "Audit-only view of all users across organizations.",
     "allOrganizations": "All organizations",
     "allRoles": "All roles",
@@ -499,7 +502,11 @@
     "vendor": "Vendor",
     "invoiceNumber": "Invoice #",
     "notes": "Notes",
+    "custom1": "Custom 1",
+    "custom2": "Custom 2",
+    "custom3": "Custom 3",
     "unknown": "unknown",
+    "someone": "Someone",
     "organization": "Organization",
     "admin": "Admin",
     "switchTo": "Switch to:",

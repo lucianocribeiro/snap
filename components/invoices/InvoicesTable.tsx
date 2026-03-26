@@ -104,7 +104,10 @@ export function InvoicesTable({
                 {formatAmountWithCurrency(invoice.totalAmount, invoice.currency)}
               </td>
               <td className="px-4 py-4 text-sm">
-                <StatusBadge status={invoice.status} variant="invoice" />
+                <StatusBadge
+                  status={invoice.status === "Paid" ? t("status.paid") : t("status.unpaid")}
+                  variant="invoice"
+                />
               </td>
               <td className="px-4 py-4 text-sm text-snap-textDim">
                 <div className="flex items-center gap-3">

@@ -12,18 +12,26 @@ const stylesByVariant: Record<StatusVariant, Record<string, string>> = {
   invoice: {
     paid: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
     unpaid: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+    pagada: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    impaga: "border-amber-500/40 bg-amber-500/10 text-amber-300",
   },
   user: {
     active: "border-blue-500/40 bg-blue-500/10 text-blue-300",
     inactive: "border-snap-border bg-snap-bg text-snap-textDim",
+    activo: "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    inactivo: "border-snap-border bg-snap-bg text-snap-textDim",
   },
   org: {
     active: "border-blue-500/40 bg-blue-500/10 text-blue-300",
     inactive: "border-snap-border bg-snap-bg text-snap-textDim",
+    activo: "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    inactivo: "border-snap-border bg-snap-bg text-snap-textDim",
   },
   project: {
     active: "border-blue-500/40 bg-blue-500/10 text-blue-300",
     archived: "border-snap-border bg-snap-bg text-snap-textDim",
+    activo: "border-blue-500/40 bg-blue-500/10 text-blue-300",
+    archivado: "border-snap-border bg-snap-bg text-snap-textDim",
   },
   access: {
     edit: "border-blue-500/40 bg-blue-500/10 text-blue-300",
@@ -52,4 +60,3 @@ export function StatusBadge({ status, variant }: StatusBadgeProps) {
 
   return <span className={`${baseClass} ${stateClass}`}>{status}</span>;
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProjectColumn } from "@/components/dashboard/types";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -160,6 +160,8 @@ export default function NewInvoicePage() {
   const [mappingByFieldId, setMappingByFieldId] = useState<Record<string, string>>({});
   const [suggestedMappings, setSuggestedMappings] = useState<ColumnMapping[]>([]);
   const [vendorNameFromOCR, setVendorNameFromOCR] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const steps = [
     t("invoices.steps.selectProject"),
     t("invoices.steps.upload"),
@@ -167,6 +169,10 @@ export default function NewInvoicePage() {
     t("invoices.steps.mapColumns"),
     t("invoices.steps.confirm"),
   ];
+
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     if (!canEdit) {
@@ -818,15 +824,34 @@ export default function NewInvoicePage() {
                 </div>
               ) : null}
 
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture={"environment" as never}
+                className="hidden"
+                onChange={(event) => handleFileSelect(event.target.files?.[0] ?? null)}
+              />
+
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled
-                  title={t("invoices.availableOnMobileApp")}
-                  className="cursor-not-allowed rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textDim opacity-70"
-                >
-                  {t("invoices.takePhoto")}
-                </button>
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="rounded-md border border-snap-border bg-snap-card px-3 py-2 text-sm font-medium text-snap-textMain"
+                  >
+                    {t("invoices.takePhoto")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    title={t("invoices.availableOnMobileApp")}
+                    className="cursor-not-allowed rounded-md border border-snap-border px-3 py-2 text-sm text-snap-textDim opacity-70"
+                  >
+                    {t("invoices.takePhoto")}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => goToStep(5)}

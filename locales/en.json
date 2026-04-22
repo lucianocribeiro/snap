@@ -55,13 +55,15 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "currencyFilter": "Currency",
     "loadError": "Unable to load dashboard data right now.",
     "summary": {
       "totalProjects": "Total projects",
       "totalInvoicesMonth": "Total invoices (this month)",
       "totalAmountMonth": "Total amount processed (this month)",
       "pendingUnpaid": "Pending / unpaid invoices",
-      "basedOnInvoiceTotals": "Based on invoice totals"
+      "basedOnInvoiceTotals": "Based on invoice totals",
+      "basedOnInvoiceTotalsCurrency": "Based on invoice totals ({currency})"
     },
     "charts": {
       "spendByPeriod": "Total Spend by Period",
@@ -181,6 +183,7 @@
     "deleteInvoiceTitle": "Delete Invoice",
     "emptyByFilters": "Invoices matching your current filters will appear here.",
     "invoiceDate": "Invoice Date",
+    "deliveryDate": "Delivery Date",
     "dueDate": "Due Date",
     "tax": "Tax",
     "total": "Total",
@@ -201,6 +204,17 @@
     "failedUpdateInvoice": "Failed to update invoice.",
     "amountExclTax": "Amount (excl. tax)",
     "totalAmount": "Total Amount",
+    "fieldLabels": {
+      "invoiceDate": "Invoice Date",
+      "vendor": "Vendor",
+      "totalAmount": "Total Amount",
+      "amount": "Amount (excl. tax)",
+      "tax": "Tax",
+      "invoiceNumber": "Invoice #",
+      "dueDate": "Due Date",
+      "currency": "Currency",
+      "deliveryDate": "Delivery Date"
+    },
     "steps": {
       "selectProject": "Select Project",
       "upload": "Upload",

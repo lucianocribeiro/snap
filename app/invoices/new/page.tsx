@@ -83,6 +83,7 @@ const DEFAULT_COLUMN_BY_EXTRACTED_KEY: Record<string, ProjectColumn | null> = {
   tax: "tax",
   invoiceNumber: "invoiceNumber",
   dueDate: "dueDate",
+  deliveryDate: "dueDate",
 };
 
 function confidenceDotClass(confidence: ExtractedField["confidence"]) {
@@ -129,7 +130,7 @@ function normalizeCurrency(value: string | undefined): CurrencyCode {
 export default function NewInvoicePage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, organizationId, canEdit } = useAuth();
   const [step, setStep] = useState(1);
   const [stepHistory, setStepHistory] = useState<number[]>([]);
@@ -244,6 +245,12 @@ export default function NewInvoicePage() {
 
   const updateField = (key: keyof InvoiceFormState, value: string) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const getFieldLabel = (key: string, fallback: string): string => {
+    const translationKey = `invoices.fieldLabels.${key}`;
+    const translated = t(translationKey);
+    return translated === translationKey ? fallback : translated;
   };
 
   const getProjectColumnLabel = (column: ProjectColumn) => {
@@ -430,7 +437,7 @@ export default function NewInvoicePage() {
       body: {
         fileUrl: path,
         projectId: selectedProjectId,
-        language: "en" as const,
+        language,
       },
       headers: {
         Authorization: `Bearer ${session?.access_token ?? ""}`,
@@ -867,7 +874,7 @@ export default function NewInvoicePage() {
                     {extractedFields.map((field) => (
                       <div key={field.id} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-sm text-snap-textDim">{field.label}</label>
+                          <label className="text-sm text-snap-textDim">{getFieldLabel(field.key, field.label)}</label>
                           <span
                             title={t(confidenceLabel(field.confidence))}
                             className={`inline-block h-2.5 w-2.5 rounded-full ${confidenceDotClass(field.confidence)}`}
@@ -902,7 +909,7 @@ export default function NewInvoicePage() {
                   {extractedFields.map((field) => (
                     <div key={field.id} className="grid gap-2 rounded-md border border-snap-border bg-snap-bg p-3 md:grid-cols-2">
                       <div>
-                        <p className="text-sm font-medium text-snap-textMain">{field.label}</p>
+                        <p className="text-sm font-medium text-snap-textMain">{getFieldLabel(field.key, field.label)}</p>
                         <p className="text-sm text-snap-textDim">{field.value}</p>
                       </div>
                       <div>

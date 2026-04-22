@@ -55,13 +55,15 @@
   },
   "dashboard": {
     "title": "Panel",
+    "currencyFilter": "Moneda",
     "loadError": "No se pudieron cargar los datos del panel en este momento.",
     "summary": {
       "totalProjects": "Proyectos totales",
       "totalInvoicesMonth": "Facturas totales (este mes)",
       "totalAmountMonth": "Monto total procesado (este mes)",
       "pendingUnpaid": "Facturas pendientes / impagas",
-      "basedOnInvoiceTotals": "Basado en totales de factura"
+      "basedOnInvoiceTotals": "Basado en totales de factura",
+      "basedOnInvoiceTotalsCurrency": "Basado en totales de factura ({currency})"
     },
     "charts": {
       "spendByPeriod": "Gasto total por período",
@@ -181,6 +183,7 @@
     "deleteInvoiceTitle": "Eliminar factura",
     "emptyByFilters": "Las facturas que coincidan con tus filtros aparecerán aquí.",
     "invoiceDate": "Fecha de factura",
+    "deliveryDate": "Fecha de entrega",
     "dueDate": "Fecha de vencimiento",
     "tax": "Impuesto",
     "total": "Total",
@@ -201,6 +204,17 @@
     "failedUpdateInvoice": "No se pudo actualizar la factura.",
     "amountExclTax": "Monto (sin impuestos)",
     "totalAmount": "Monto total",
+    "fieldLabels": {
+      "invoiceDate": "Fecha de factura",
+      "vendor": "Proveedor",
+      "totalAmount": "Total",
+      "amount": "Monto (sin impuesto)",
+      "tax": "Impuesto",
+      "invoiceNumber": "N° de factura",
+      "dueDate": "Fecha de vencimiento",
+      "currency": "Moneda",
+      "deliveryDate": "Fecha de entrega"
+    },
     "steps": {
       "selectProject": "Seleccionar proyecto",
       "upload": "Subir",
